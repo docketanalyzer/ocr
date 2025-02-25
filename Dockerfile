@@ -12,8 +12,8 @@ RUN apt-get update && \
 
 COPY . .
 
-RUN pip install .
+RUN pip install --no-cache-dir .
 
-RUN python test.py
+RUN python init.py
 
 CMD [ "python", "-u", "handler.py" ]

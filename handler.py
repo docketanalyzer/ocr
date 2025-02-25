@@ -4,10 +4,10 @@ from docketanalyzer_ocr import load_pdf, process_pdf
 
 
 def handler(event):
-    duration = datetime.now()
+    start = datetime.now()
     inputs = event.pop('input')
-    filename = inputs.pop('filename')
-    batch_size = inputs.pop('batch_size', 1)
+    filename = inputs.get('filename')
+    batch_size = inputs.get('batch_size', 1)
     if inputs.get('s3_key'):
         file, filename = load_pdf(s3_key=inputs.pop('s3_key'), filename=filename)
     elif inputs.get('file'):
@@ -20,7 +20,7 @@ def handler(event):
         completed = 0
         for page in doc.stream(batch_size=batch_size):
             completed += 1
-            duration = (datetime.now() - duration).total_seconds()
+            duration = (datetime.now() - start).total_seconds()
             yield {
                 'page': page.data,
                 'seconds_elapsed': duration,

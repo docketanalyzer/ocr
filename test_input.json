@@ -1,6 +1,7 @@
 {
   "input": {
-    "path": "app/data/test.pdf",
-    "batch_size": 16
+    "s3_key": "ocr/test.pdf",
+    "filename": "test.pdf",
+    "batch_size": 1
   }
 }
