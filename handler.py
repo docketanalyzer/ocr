@@ -51,7 +51,7 @@ def handler(event: dict) -> Generator[dict, None, None]:
             yield {
                 "page": page.data,
                 "seconds_elapsed": duration,
-                "progress": len(doc) / completed,
+                "progress": completed / len(doc),
                 "status": "success",
             }
     except Exception as e:
