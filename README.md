@@ -33,5 +33,5 @@ This project uses GitHub Actions for continuous integration:
 
 The CI workflow runs on every push to main/master branches and on pull requests.
 
-You can view the workflow configurations in the `.github/workflows` directory.
+You can view the workflow configuration in the `.github/workflows/ci.yml` file.
 
