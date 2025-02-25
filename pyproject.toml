@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "docketanalyzer-ocr"
+version = "0.1.0"
+authors = [
+    { name = "Nathan Dahlberg" },
+]
+description = "Docket Analyzer OCR Container"
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "boto3>=1.37.0",
+    "click>=8.0.0",
+    "dill",
+    "doclayout_yolo",
+    "huggingface-hub>=0.29.1",
+    "paddleocr",
+    "paddlepaddle-gpu==2.6.2",
+    "pymupdf",
+    "python-dotenv>=1.0.1",
+    "runpod",
+]
+

@@ -1,0 +1,6 @@
+{
+  "input": {
+    "path": "app/data/test.pdf",
+    "batch_size": 16
+  }
+}

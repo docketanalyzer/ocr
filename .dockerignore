@@ -1,0 +1,22 @@
+archive
+
+# Test directories
+test/
+tests/
+__pycache__/
+
+# Development files
+*.pyc
+.pytest_cache/
+.coverage
+.env
+.git/
+.gitignore
+
+# Documentation
+docs/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp 
