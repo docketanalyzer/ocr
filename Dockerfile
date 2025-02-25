@@ -12,7 +12,7 @@ RUN apt-get update && \
 
 COPY . .
 
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir '.[gpu]'
 
 RUN python init.py
 

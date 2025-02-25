@@ -12,15 +12,29 @@ description = "Docket Analyzer OCR Container"
 readme = "README.md"
 requires-python = ">=3.10,<3.11"
 dependencies = [
-    "boto3>=1.37.0",
-    "click>=8.0.0",
+    "boto3",
+    "click",
     "dill",
     "doclayout_yolo",
-    "huggingface-hub>=0.29.1",
+    "huggingface-hub",
+    "paddlepaddle",
     "paddleocr",
-    "paddlepaddle-gpu==2.6.2",
     "pymupdf",
-    "python-dotenv>=1.0.1",
+    "pytest",
+    "python-dotenv",
+    "ruff",
     "runpod",
 ]
 
+[project.optional-dependencies]
+gpu = [
+    "paddlepaddle-gpu==2.6.2",
+]
+
+[tool.ruff]
+lint.select = ["E", "F", "I"]
+line-length = 120
+
+[tool.ruff.lint.isort]
+known-first-party = ["docketanalyzer_ocr"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]

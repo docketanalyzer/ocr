@@ -1,36 +1,63 @@
 from datetime import datetime
+from typing import Generator
+
 import runpod
+
 from docketanalyzer_ocr import load_pdf, process_pdf
 
 
-def handler(event):
+def handler(event: dict) -> Generator[dict, None, None]:
+    """RunPod serverless handler for OCR processing.
+
+    This function processes PDF documents for OCR text extraction in a serverless
+    environment. It can handle PDFs provided either as binary data or via S3 keys.
+
+    Args:
+        event: The event dictionary containing:
+            - input: Dictionary with processing parameters:
+                - s3_key: Optional S3 key to load the PDF from
+                - file: Optional binary PDF data
+                - filename: Optional filename for the PDF
+                - batch_size: Optional batch size for processing (default: 1)
+
+    Yields:
+        dict: Status updates during processing, including:
+            - page: Processed page data
+            - seconds_elapsed: Processing time so far
+            - progress: Processing progress (0-1)
+            - status: 'success' or 'failed'
+            - error: Error message if status is 'failed'
+    """
     start = datetime.now()
-    inputs = event.pop('input')
-    filename = inputs.get('filename')
-    batch_size = inputs.get('batch_size', 1)
-    if inputs.get('s3_key'):
-        file, filename = load_pdf(s3_key=inputs.pop('s3_key'), filename=filename)
-    elif inputs.get('file'):
-        file, filename = load_pdf(file=inputs.pop('file'), filename=filename)
-    else:
-        raise ValueError("Neither 's3_key' nor 'file' provided in input")
+    inputs = event.pop("input")
+    filename = inputs.get("filename")
+    batch_size = inputs.get("batch_size", 1)
 
     try:
-        doc = process_pdf(file, filename=filename)
+        # Load the PDF file (now returns binary data)
+        if inputs.get("s3_key"):
+            pdf_data, filename = load_pdf(s3_key=inputs.pop("s3_key"), filename=filename)
+        elif inputs.get("file"):
+            pdf_data, filename = load_pdf(file=inputs.pop("file"), filename=filename)
+        else:
+            raise ValueError("Neither 's3_key' nor 'file' provided in input")
+
+        # Process the PDF using the binary data
+        doc = process_pdf(pdf_data, filename=filename)
         completed = 0
         for page in doc.stream(batch_size=batch_size):
             completed += 1
             duration = (datetime.now() - start).total_seconds()
             yield {
-                'page': page.data,
-                'seconds_elapsed': duration,
-                'progress': len(doc) / completed,
-                'status': 'success',
+                "page": page.data,
+                "seconds_elapsed": duration,
+                "progress": len(doc) / completed,
+                "status": "success",
             }
     except Exception as e:
         yield {
-            'error': str(e),
-            'status': 'failed',
+            "error": str(e),
+            "status": "failed",
         }
 
 
@@ -40,4 +67,3 @@ runpod.serverless.start(
         "return_aggregate_stream": False,
     }
 )
-
