@@ -16,4 +16,4 @@ RUN pip install .
 
 RUN python test.py
 
-CMD [ "python", "-u", "/app/test.py" ]
+CMD [ "python", "-u", "handler.py" ]
