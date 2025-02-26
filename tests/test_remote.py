@@ -1,4 +1,7 @@
 import json
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -268,6 +271,196 @@ class TestRunPodClient:
             headers=mock_client.headers,
             timeout=30,
         )
+
+    def test_stream_results_implementation(self):
+        """Test the actual implementation of _stream_results method with controlled server responses."""
+
+        # Create a mock HTTP server that simulates RunPod's streaming response
+        class MockRunPodHandler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+
+                # Simulate a streaming response with multiple chunks
+                responses = [
+                    {"status": "IN_PROGRESS", "id": "test-job-id"},
+                    {"status": "IN_PROGRESS", "stream": [{"output": {"page": {"i": 0, "blocks": []}}}]},
+                    {"status": "IN_PROGRESS", "stream": [{"output": {"page": {"i": 1, "blocks": []}}}]},
+                    {"status": "COMPLETED", "stream": [{"output": {"status": "COMPLETED"}}]},
+                ]
+
+                for response in responses:
+                    self.wfile.write(json.dumps(response).encode("utf-8") + b"\n")
+                    self.wfile.flush()
+                    time.sleep(0.1)  # Simulate delay between chunks
+
+            def log_message(self, format, *args):
+                # Suppress log messages
+                pass
+
+        # Start a mock server in a separate thread
+        server = HTTPServer(("localhost", 0), MockRunPodHandler)
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+
+        try:
+            # Create a real RunPodClient instance
+            client = RunPodClient(api_key="test_api_key", endpoint_id="test_endpoint_id")
+
+            # Override the base URL to point to our mock server
+            port = server.server_port
+            client.base_url = f"http://localhost:{port}"
+
+            # Call the actual _stream_results method (not mocked)
+            results = list(client._stream_results("test-job-id", timeout=5, poll_interval=0.1))
+
+            # Verify the results
+            assert len(results) == 4
+            assert results[0]["status"] == "IN_PROGRESS"
+            assert results[0]["id"] == "test-job-id"
+            assert results[1]["status"] == "IN_PROGRESS"
+            assert "stream" in results[1]
+            assert results[1]["stream"][0]["output"]["page"]["i"] == 0
+            assert results[2]["status"] == "IN_PROGRESS"
+            assert results[2]["stream"][0]["output"]["page"]["i"] == 1
+            assert results[3]["status"] == "COMPLETED"
+            assert results[3]["stream"][0]["output"]["status"] == "COMPLETED"
+
+        finally:
+            # Shut down the server
+            server.shutdown()
+            server.server_close()
+            server_thread.join(timeout=1)
+
+    def test_stream_results_retry_on_404(self):
+        """Test the actual implementation of _stream_results with 404 response handling."""
+
+        # Create a mock HTTP server that first returns 404, then 200 with streaming data
+        class MockRunPodHandler(BaseHTTPRequestHandler):
+            # Track number of requests to simulate job not ready then ready
+            request_count = 0
+
+            def do_POST(self):
+                # First request returns 404 (job not ready)
+                if MockRunPodHandler.request_count == 0:
+                    MockRunPodHandler.request_count += 1
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Job not ready"}).encode("utf-8"))
+                    return
+
+                # Second request returns 200 with streaming data
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+
+                # Send a single completion response
+                response = {"status": "COMPLETED", "id": "test-job-id"}
+                self.wfile.write(json.dumps(response).encode("utf-8") + b"\n")
+                self.wfile.flush()
+
+            def log_message(self, format, *args):
+                # Suppress log messages
+                pass
+
+        # Start a mock server in a separate thread
+        server = HTTPServer(("localhost", 0), MockRunPodHandler)
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+
+        try:
+            # Create a real RunPodClient instance
+            client = RunPodClient(api_key="test_api_key", endpoint_id="test_endpoint_id")
+
+            # Override the base URL to point to our mock server
+            port = server.server_port
+            client.base_url = f"http://localhost:{port}"
+
+            # Call the actual _stream_results method (not mocked)
+            results = list(client._stream_results("test-job-id", timeout=5, poll_interval=0.1))
+
+            # Verify the results
+            assert len(results) == 1
+            assert results[0]["status"] == "COMPLETED"
+            assert results[0]["id"] == "test-job-id"
+            assert MockRunPodHandler.request_count == 1  # Verify we got a 404 first
+
+        finally:
+            # Shut down the server
+            server.shutdown()
+            server.server_close()
+            server_thread.join(timeout=1)
+
+    def test_stream_results_retry_on_chunked_encoding_error(self):
+        """Test the actual implementation of _stream_results with chunked encoding error handling."""
+
+        # Create a mock HTTP server that simulates a chunked encoding error
+        class MockRunPodHandler(BaseHTTPRequestHandler):
+            # Track number of requests to simulate connection error then success
+            request_count = 0
+
+            def do_POST(self):
+                # First request returns 200 but closes connection prematurely
+                if MockRunPodHandler.request_count == 0:
+                    MockRunPodHandler.request_count += 1
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+
+                    # Send partial data then close connection
+                    self.wfile.write(json.dumps({"status": "IN_PROGRESS", "id": "test-job-id"}).encode("utf-8") + b"\n")
+                    self.wfile.flush()
+                    # Abruptly close connection to simulate chunked encoding error
+                    self.connection.close()
+                    return
+
+                # Second request returns complete data
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+
+                # Send a completion response
+                response = {"status": "COMPLETED", "id": "test-job-id"}
+                self.wfile.write(json.dumps(response).encode("utf-8") + b"\n")
+                self.wfile.flush()
+
+            def log_message(self, format, *args):
+                # Suppress log messages
+                pass
+
+        # Start a mock server in a separate thread
+        server = HTTPServer(("localhost", 0), MockRunPodHandler)
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+
+        try:
+            # Create a real RunPodClient instance
+            client = RunPodClient(api_key="test_api_key", endpoint_id="test_endpoint_id")
+
+            # Override the base URL to point to our mock server
+            port = server.server_port
+            client.base_url = f"http://localhost:{port}"
+
+            # Call the actual _stream_results method (not mocked)
+            results = list(client._stream_results("test-job-id", timeout=5, poll_interval=0.1))
+
+            # Verify the results - should include the COMPLETED response
+            # Note: The first response might be lost due to the connection error
+            assert len(results) >= 1
+            assert results[-1]["status"] == "COMPLETED"
+            assert results[-1]["id"] == "test-job-id"
+            assert MockRunPodHandler.request_count >= 1  # Verify we had at least one request
+
+        finally:
+            # Shut down the server
+            server.shutdown()
+            server.server_close()
+            server_thread.join(timeout=1)
 
 
 class TestPDFDocumentRemote:
