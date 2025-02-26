@@ -204,7 +204,7 @@ class TestPDFDocument:
         """Test the process_pdf function."""
         mock_extract_native_text.return_value = [{"bbox": [10, 20, 100, 30], "content": "Test content"}]
 
-        doc = process_pdf(sample_pdf_bytes, filename="test.pdf", process=True)
+        doc = process_pdf(sample_pdf_bytes, filename="test.pdf").process()
 
         assert isinstance(doc, PDFDocument)
         assert doc.filename == "test.pdf"

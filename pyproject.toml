@@ -38,3 +38,13 @@ line-length = 120
 [tool.ruff.lint.isort]
 known-first-party = ["docketanalyzer_ocr"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.pytest.ini_options]
+# Filter out warnings that aren't relevant to our code
+filterwarnings = [
+    "ignore::DeprecationWarning:importlib._bootstrap",
+    "ignore::DeprecationWarning:thop.profile",
+    "ignore::DeprecationWarning:setuptools.command.easy_install",
+    "ignore::DeprecationWarning:pkg_resources",
+    "ignore::DeprecationWarning:sys",
+]

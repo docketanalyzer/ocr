@@ -1,4 +1,4 @@
-# OCR Project
+# Docket Analyzer OCR
 
 ## Installation
 
@@ -24,7 +24,7 @@ pytest
 ruff format . && ruff check --fix .
 ```
 
-## Continuous Integration
+## CI
 
 This project uses GitHub Actions for continuous integration:
 

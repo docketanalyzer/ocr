@@ -19,7 +19,7 @@ class TestIntegration:
         mock_predict_layout.return_value = [mock_layout_result]
 
         # Process the PDF
-        doc = process_pdf(sample_pdf_bytes, filename="test.pdf", process=True)
+        doc = process_pdf(sample_pdf_bytes, filename="test.pdf").process()
 
         # Assertions
         assert isinstance(doc, PDFDocument)
@@ -46,7 +46,7 @@ class TestIntegration:
         mock_extract_ocr.return_value = mock_ocr_result
 
         # Process the PDF with OCR
-        doc = process_pdf(sample_pdf_bytes, filename="test.pdf", process=True)
+        doc = process_pdf(sample_pdf_bytes, filename="test.pdf").process()
 
         # Assertions
         assert isinstance(doc, PDFDocument)
@@ -63,7 +63,7 @@ class TestIntegration:
         mock_predict_layout.return_value = [mock_layout_result]
 
         # Process the PDF
-        doc = process_pdf(sample_pdf_bytes, filename="test.pdf", process=True)
+        doc = process_pdf(sample_pdf_bytes, filename="test.pdf").process()
 
         # Assertions
         assert isinstance(doc, PDFDocument)
@@ -76,7 +76,7 @@ class TestIntegration:
     def test_save_and_load(self, sample_pdf_bytes, tmp_path):
         """Test saving and loading document data."""
         # Process the PDF
-        doc = process_pdf(sample_pdf_bytes, filename="test.pdf", process=True)
+        doc = process_pdf(sample_pdf_bytes, filename="test.pdf").process()
 
         # Save to file
         output_path = tmp_path / "test_output.json"

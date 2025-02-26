@@ -82,6 +82,23 @@ def download_from_s3(s3_key: str, local_path: Optional[Union[str, Path]] = None)
         return None
 
 
+def delete_from_s3(s3_key: str) -> bool:
+    """Deletes a file from an S3 bucket.
+
+    Args:
+        s3_key: S3 key (path) of the file to delete.
+
+    Returns:
+        bool: True if deletion was successful, False otherwise.
+    """
+    try:
+        s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        return True
+    except Exception as e:
+        print(f"Warning: Failed to delete S3 object {s3_key}: {e}")
+        return False
+
+
 def load_pdf(
     file: Optional[bytes] = None,
     s3_key: Optional[str] = None,

@@ -1,5 +1,4 @@
 import os
-import sys
 import tempfile
 from pathlib import Path
 
@@ -7,9 +6,6 @@ import fitz
 import numpy as np
 import pytest
 from PIL import Image
-
-# Add the parent directory to sys.path to import the docketanalyzer_ocr package
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 @pytest.fixture
