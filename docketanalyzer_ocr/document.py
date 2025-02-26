@@ -2,7 +2,7 @@ import json
 import uuid
 from pathlib import Path
 from typing import Generator, Iterator, Optional, Union
-
+from PIL import Image
 import fitz
 import numpy as np
 from PIL import Image
