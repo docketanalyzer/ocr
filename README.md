@@ -13,14 +13,12 @@ pip install '.[gpu]'
 ## Testing
 
 ```bash
-# Run all tests
-pytest
+pytest --cov=docketanalyzer_ocr tests/ --cov-report=xml --cov-branch --junitxml=junit.xml -o junit_family=legacy
 ```
 
 ## Code Quality
 
 ```bash
-# Format code and fix linting issues
 ruff format . && ruff check --fix .
 ```
 
