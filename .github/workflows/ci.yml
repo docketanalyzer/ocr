@@ -8,10 +8,7 @@ on:
 
 jobs:
   lint-and-autofix:
-    needs: test
-    # Only run auto-fix if tests passed
     if: success()
-    # Skip this job if the commit was already made by GitHub Actions to prevent infinite loops
     runs-on: ubuntu-latest
     permissions:
       contents: write
