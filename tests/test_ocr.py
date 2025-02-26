@@ -1,13 +1,12 @@
-from unittest.mock import MagicMock, patch
 import time
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-import torch
-import os
-from pathlib import Path
 
-from docketanalyzer_ocr.ocr import extract_ocr_text, load_model
 from docketanalyzer_ocr.document import page_to_image
+from docketanalyzer_ocr.ocr import extract_ocr_text, load_model
 
 
 class TestOCR:
@@ -104,41 +103,42 @@ class TestOCR:
 
     def test_real_ocr_extraction(self):
         """Test actual OCR extraction on a real PDF document.
-        
+
         This test uses the test.pdf file from the setup directory to test real OCR functionality.
         It works on both CPU and GPU, though it may be slower on CPU.
         """
         try:
             # Reset the global OCR model to ensure we're testing the actual loading
             import docketanalyzer_ocr.ocr
+
             docketanalyzer_ocr.ocr.OCR_MODEL = None
-            
+
             import fitz  # PyMuPDF
-            
+
             # Path to the test PDF
             pdf_path = Path(__file__).parent.parent / "docketanalyzer_ocr" / "setup" / "test.pdf"
             assert pdf_path.exists(), f"Test PDF not found at {pdf_path}"
-            
+
             # Open the PDF and get the first page
             doc = fitz.open(pdf_path)
             page = doc[0]
-            
+
             # Convert the page to an image
             image = page_to_image(page, dpi=150)  # Lower DPI for faster processing
-            
+
             # Run actual OCR on the image
             ocr_start = time.time()
             ocr_results = extract_ocr_text(image)
             ocr_time = time.time() - ocr_start
-            
+
             # If OCR took less than 1 second, it's likely not actually running
             if ocr_time < 1.0:
                 # Check if the model was loaded
                 model, device = load_model()
-                
+
                 # Force a new OCR run with explicit timing
                 ocr_results = model.ocr(image, cls=False)
-                
+
                 # Process results to match our format
                 processed_results = []
                 for idx in range(len(ocr_results)):
@@ -152,29 +152,43 @@ class TestOCR:
                                 }
                             )
                 ocr_results = processed_results
-            
+
             # Close the document
             doc.close()
-            
+
             # Verify results
             assert isinstance(ocr_results, list)
-            
+
             # If OCR didn't find any text, this might be a test environment issue
             if len(ocr_results) == 0:
                 pytest.skip("OCR didn't extract any text. This might be due to test environment limitations.")
-            
+
             # Check for expected content in the results
             all_text = " ".join([item["content"] for item in ocr_results])
-            
+
             # Check for common words that should be in a legal document
             common_terms = [
-                "court", "case", "plaintiff", "defendant", "file", "document", "order",
-                "the", "and", "for", "this", "that", "with", "date", "page", "number"
+                "court",
+                "case",
+                "plaintiff",
+                "defendant",
+                "file",
+                "document",
+                "order",
+                "the",
+                "and",
+                "for",
+                "this",
+                "that",
+                "with",
+                "date",
+                "page",
+                "number",
             ]
-            
+
             found_terms = [term for term in common_terms if term.lower() in all_text.lower()]
             assert len(found_terms) > 0, "No expected terms found in extracted text"
-            
+
             # Check that bounding boxes are reasonable for any results we got
             for result in ocr_results:
                 bbox = result["bbox"]
@@ -183,6 +197,6 @@ class TestOCR:
                 if all(isinstance(coord, (int, float)) for coord in bbox):
                     assert bbox[0] <= bbox[2], f"x1 should be less than or equal to x2, got {bbox}"
                     assert bbox[1] <= bbox[3], f"y1 should be less than or equal to y2, got {bbox}"
-        
+
         except Exception as e:
             pytest.skip(f"Skipping real OCR test due to error: {str(e)}")
