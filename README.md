@@ -28,10 +28,10 @@ ruff format . && ruff check --fix .
 
 This project uses GitHub Actions for continuous integration:
 
-- **Linting with Auto-fix**: Checks and automatically fixes code formatting/linting issues
-- **Testing**: Runs tests and generates coverage reports
+- **Testing**: Runs tests and generates coverage reports first
+- **Linting with Auto-fix**: Only if tests pass, checks and automatically fixes code formatting/linting issues
 
-The workflow runs on pushes and PRs to main/master branches. If linting issues are found, they're automatically fixed, committed, and the tests run on the fixed code.
+The workflow runs on pushes and PRs to main/master branches. Auto-fixes are only applied after tests have passed, ensuring test failures remain visible.
 
 See `.github/workflows/ci.yml` for configuration details.
 
