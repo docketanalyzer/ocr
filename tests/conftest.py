@@ -59,6 +59,4 @@ def sample_image():
 def test_pdf_path():
     """Path to the real test PDF document."""
     pdf_path = Path(__file__).parent.parent / "docketanalyzer_ocr" / "setup" / "test.pdf"
-    if not pdf_path.exists():
-        pytest.skip(f"Test PDF not found at {pdf_path}")
     return pdf_path

@@ -1,27 +1,15 @@
 from datetime import datetime
 
-import pytest
-
 from docketanalyzer_ocr.document import PDFDocument
 from docketanalyzer_ocr.remote import RunPodClient
 from docketanalyzer_ocr.utils import (
-    AWS_ACCESS_KEY_ID,
-    AWS_SECRET_ACCESS_KEY,
     RUNPOD_API_KEY,
     RUNPOD_ENDPOINT_ID,
-    S3_BUCKET_NAME,
 )
 
 
 class TestRemote:
     """Tests for remote processing functionality."""
-
-    def setup_method(self):
-        """Skip tests if credentials are missing."""
-        if not RUNPOD_API_KEY or not RUNPOD_ENDPOINT_ID:
-            pytest.skip("RunPod API key or endpoint ID not available")
-        if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY or not S3_BUCKET_NAME:
-            pytest.skip("AWS credentials or S3 bucket name not available")
 
     def test_client_initialization(self):
         """Test RunPod client initialization."""

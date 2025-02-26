@@ -24,13 +24,6 @@ class TestUtils:
 
     def test_s3_operations(self):
         """Test S3 operations with real AWS resources."""
-        # Skip if credentials are missing
-        if (
-            not os.getenv("AWS_ACCESS_KEY_ID")
-            or not os.getenv("AWS_SECRET_ACCESS_KEY")
-            or not os.getenv("S3_BUCKET_NAME")
-        ):
-            pytest.skip("AWS credentials or S3 bucket name not available")
 
         # Create a test file
         with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
