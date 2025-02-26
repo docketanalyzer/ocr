@@ -9,6 +9,8 @@ RUN apt-get update && \
     apt-get -y install cudnn9-cuda-11 && \
     apt-get remove -y python3-blinker && \
     rm -rf /var/lib/apt/lists/*
+    
+RUN python -m pip install --upgrade pip
 
 COPY . .
 
