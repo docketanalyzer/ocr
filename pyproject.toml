@@ -21,6 +21,7 @@ dependencies = [
     "paddleocr",
     "pymupdf",
     "pytest",
+    "pytest-cov",
     "python-dotenv",
     "ruff",
     "runpod",
