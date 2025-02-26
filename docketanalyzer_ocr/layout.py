@@ -189,10 +189,12 @@ def predict_layout(images: list, batch_size: int = 8) -> list[list[dict]]:
                 pred.boxes.cls,
             ):
                 bbox = [int(p.item()) for p in xyxy]
-                blocks.append({
-                    'type': LAYOUT_CHOICES[int(cla.item())],
-                    'bbox': bbox,
-                })
+                blocks.append(
+                    {
+                        "type": LAYOUT_CHOICES[int(cla.item())],
+                        "bbox": bbox,
+                    }
+                )
             blocks = merge_overlapping_blocks(blocks)
             results.append(blocks)
 
