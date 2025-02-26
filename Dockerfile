@@ -14,6 +14,6 @@ COPY . .
 
 RUN pip install --no-cache-dir '.[gpu]'
 
-RUN python init.py
+RUN python docketanalyzer_ocr/setup/run.py
 
 CMD [ "python", "-u", "handler.py" ]
