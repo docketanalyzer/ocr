@@ -28,27 +28,22 @@ ruff format . && ruff check --fix .
 
 This project uses GitHub Actions for continuous integration:
 
-- **Linting**: Automatically checks code formatting and linting with Ruff
-- **Testing**: Runs all tests with pytest and generates coverage reports
+- **Linting with Auto-fix**: Checks and automatically fixes code formatting/linting issues
+- **Testing**: Runs tests and generates coverage reports
 
-The CI workflow runs on every push to main/master branches and on pull requests.
+The workflow runs on pushes and PRs to main/master branches. If linting issues are found, they're automatically fixed, committed, and the tests run on the fixed code.
 
-You can view the workflow configuration in the `.github/workflows/ci.yml` file.
+See `.github/workflows/ci.yml` for configuration details.
 
-### Setting Up GitHub Secrets
+### GitHub Secrets
 
-The CI workflow requires the following environment variables to be set as GitHub Secrets:
+Required secrets for CI:
+- `RUNPOD_API_KEY`
+- `RUNPOD_ENDPOINT_ID`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `S3_BUCKET_NAME`
+- `S3_ENDPOINT_URL`
 
-1. Go to your GitHub repository
-2. Navigate to Settings > Secrets and variables > Actions
-3. Click on "New repository secret"
-4. Add each of the following secrets (see `env.example` for the required variables):
-   - `RUNPOD_API_KEY`
-   - `RUNPOD_ENDPOINT_ID`
-   - `AWS_ACCESS_KEY_ID`
-   - `AWS_SECRET_ACCESS_KEY`
-   - `S3_BUCKET_NAME`
-   - `S3_ENDPOINT_URL`
-
-These secrets will be securely used by the GitHub Actions workflow when running tests.
+Add these in your repository's Settings > Secrets and variables > Actions.
 
