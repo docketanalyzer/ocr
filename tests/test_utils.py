@@ -61,9 +61,7 @@ class TestS3Functions:
 
         # Assertions
         assert result == local_path
-        mock_s3_client.download_file.assert_called_once_with(
-            os.getenv("S3_BUCKET_NAME"), s3_key, str(local_path)
-        )
+        mock_s3_client.download_file.assert_called_once_with(os.getenv("S3_BUCKET_NAME"), s3_key, str(local_path))
 
     @patch("docketanalyzer_ocr.utils.s3_client")
     def test_download_from_s3_default_path(self, mock_s3_client):
@@ -76,9 +74,7 @@ class TestS3Functions:
 
         # Assertions
         assert result.name == "file.txt"
-        mock_s3_client.download_file.assert_called_once_with(
-            os.getenv("S3_BUCKET_NAME"), s3_key, "file.txt"
-        )
+        mock_s3_client.download_file.assert_called_once_with(os.getenv("S3_BUCKET_NAME"), s3_key, "file.txt")
 
     @patch("docketanalyzer_ocr.utils.s3_client")
     def test_download_from_s3_error(self, mock_s3_client):
