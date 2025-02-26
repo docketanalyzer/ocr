@@ -38,7 +38,6 @@ def sample_pdf_path(sample_pdf_bytes):
 
     yield Path(tmp_path)
 
-    # Cleanup
     if os.path.exists(tmp_path):
         os.unlink(tmp_path)
 
@@ -57,29 +56,9 @@ def sample_image():
 
 
 @pytest.fixture
-def mock_ocr_result():
-    """Mock OCR result data."""
-    return [
-        {"bbox": [100, 100, 300, 130], "content": "Sample text line 1"},
-        {"bbox": [100, 150, 350, 180], "content": "Sample text line 2"},
-    ]
-
-
-@pytest.fixture
-def mock_layout_result():
-    """Mock layout analysis result data."""
-    return [{"bbox": [50, 50, 400, 200], "type": "text"}, {"bbox": [50, 250, 400, 400], "type": "figure"}]
-
-
-@pytest.fixture
-def mock_s3_file():
-    """Mock S3 file data."""
-    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
-        tmp.write(b"Test S3 file content")
-        tmp_path = tmp.name
-
-    yield Path(tmp_path)
-
-    # Cleanup
-    if os.path.exists(tmp_path):
-        os.unlink(tmp_path)
+def test_pdf_path():
+    """Path to the real test PDF document."""
+    pdf_path = Path(__file__).parent.parent / "docketanalyzer_ocr" / "setup" / "test.pdf"
+    if not pdf_path.exists():
+        pytest.skip(f"Test PDF not found at {pdf_path}")
+    return pdf_path

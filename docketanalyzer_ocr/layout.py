@@ -155,7 +155,8 @@ def load_model() -> tuple[YOLOv10, str]:
     device = "cpu" if not torch.cuda.is_available() else "cuda"
 
     if LAYOUT_MODEL is None:
-        LAYOUT_MODEL = YOLOv10(BASE_DIR / "models/layout.pt", device=device)
+        LAYOUT_MODEL = YOLOv10(BASE_DIR / "models" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt")
+        LAYOUT_MODEL.to(device)
 
     return LAYOUT_MODEL, device
 
@@ -181,13 +182,17 @@ def predict_layout(images: list, batch_size: int = 8) -> list[list[dict]]:
         batch = images[i : i + batch_size]
         preds = model(batch)
 
-        for j, pred in enumerate(preds):
+        for pred in preds:
             blocks = []
-            for *xyxy, conf, cls in pred:
-                x1, y1, x2, y2 = map(int, xyxy)
-                cls = int(cls.item())
-                blocks.append({"bbox": (x1, y1, x2, y2), "type": LAYOUT_CHOICES.get(cls, "text")})
-
+            for xyxy, cla in zip(
+                pred.boxes.xyxy,
+                pred.boxes.cls,
+            ):
+                bbox = [int(p.item()) for p in xyxy]
+                blocks.append({
+                    'type': LAYOUT_CHOICES[int(cla.item())],
+                    'bbox': bbox,
+                })
             blocks = merge_overlapping_blocks(blocks)
             results.append(blocks)
 
