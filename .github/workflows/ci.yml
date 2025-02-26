@@ -43,6 +43,10 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+          verbose: true
+          slug: ${{ github.repository }}
+          directory: ./
+          files: ./coverage.xml
 
   lint-and-autofix:
     needs: test
