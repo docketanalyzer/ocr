@@ -694,8 +694,7 @@ class PDFDocument:
         Args:
             path: The path to save the JSON file to.
         """
-        with open(path, "w") as f:
-            json.dump(self.data, f)
+        Path(path).write_text(json.dumps(self.data))
 
     def load(self, path_or_data: Union[str, Path, dict]) -> "PDFDocument":
         """Loads document data from a JSON file or dictionary.
@@ -707,8 +706,8 @@ class PDFDocument:
             PDFDocument: The loaded document (self).
         """
         if isinstance(path_or_data, (str, Path)):
-            with open(path_or_data, "r") as f:
-                data = json.load(f)
+            path = Path(path_or_data)
+            data = json.loads(path.read_text())
         else:
             data = path_or_data
 

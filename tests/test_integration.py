@@ -86,8 +86,7 @@ class TestIntegration:
         assert output_path.exists()
 
         # Load the file and check contents
-        with open(output_path, "r") as f:
-            data = json.load(f)
+        data = json.loads(output_path.read_text())
 
         assert data["filename"] == "test.pdf"
         assert "pages" in data
