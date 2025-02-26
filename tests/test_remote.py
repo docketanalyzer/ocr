@@ -712,6 +712,7 @@ class TestPDFDocumentRemote:
     @patch("docketanalyzer_ocr.document.delete_from_s3")
     def test_full_remote_streaming_flow(self, mock_delete_from_s3, mock_upload_to_s3, sample_pdf_bytes):
         """Test the full streaming flow with remote=True using a real HTTP server."""
+
         # Create a mock HTTP server that simulates RunPod's streaming response
         class MockRunPodHandler(BaseHTTPRequestHandler):
             # Track which endpoint is being called
@@ -723,13 +724,13 @@ class TestPDFDocumentRemote:
                     self.end_headers()
                     self.wfile.write(json.dumps({"id": "test-job-id"}).encode("utf-8"))
                     return
-                
+
                 # Handle the /stream endpoint
                 if self.path.endswith("/stream/test-job-id"):
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
-                    
+
                     # Simulate a streaming response with a single page (since sample_pdf_bytes has only one page)
                     responses = [
                         # First chunk with page 0
@@ -750,27 +751,18 @@ class TestPDFDocumentRemote:
                                         }
                                     }
                                 }
-                            ]
+                            ],
                         },
                         # Final chunk with completion status
-                        {
-                            "status": "COMPLETED",
-                            "stream": [
-                                {
-                                    "output": {
-                                        "status": "COMPLETED"
-                                    }
-                                }
-                            ]
-                        }
+                        {"status": "COMPLETED", "stream": [{"output": {"status": "COMPLETED"}}]},
                     ]
-                    
+
                     for response in responses:
                         self.wfile.write(json.dumps(response).encode("utf-8") + b"\n")
                         self.wfile.flush()
                         time.sleep(0.2)  # Add delay to simulate real streaming
                     return
-                
+
                 # Default response for unknown endpoints
                 self.send_response(404)
                 self.end_headers()
@@ -778,70 +770,71 @@ class TestPDFDocumentRemote:
             def log_message(self, format, *args):
                 # Suppress log messages
                 pass
-        
+
         # Start a mock server in a separate thread
         server = HTTPServer(("localhost", 0), MockRunPodHandler)
         server_thread = threading.Thread(target=server.serve_forever)
         server_thread.daemon = True
         server_thread.start()
-        
+
         try:
             # Setup mocks
             mock_upload_to_s3.return_value = True
-            
+
             # Create a real PDFDocument with remote=True
             with patch("docketanalyzer_ocr.document.RunPodClient") as mock_client_class:
                 # Create a real RunPodClient but override its base_url
                 from docketanalyzer_ocr.remote import RunPodClient
+
                 real_client = RunPodClient(api_key="test_api_key", endpoint_id="test_endpoint_id")
-                
+
                 # Override the base URL to point to our mock server
                 port = server.server_port
                 real_client.base_url = f"http://localhost:{port}"
-                
+
                 # Make the mock return our real client with the overridden base_url
                 mock_client_class.return_value = real_client
-                
+
                 # Create the document with remote=True
                 doc = PDFDocument(sample_pdf_bytes, filename="test.pdf", remote=True)
-                
+
                 # Create a spy for the set_blocks method to verify it's called correctly
                 original_set_blocks = doc.pages[0].set_blocks
                 set_blocks_calls = []
-                
+
                 def spy_set_blocks(blocks):
                     set_blocks_calls.append(blocks)
                     return original_set_blocks(blocks)
-                
+
                 # Apply the spy to the page
                 doc.pages[0].set_blocks = spy_set_blocks
-                
+
                 # Process the document and collect pages
                 processed_pages = list(doc.stream(batch_size=1))
-                
+
                 # Verify results
                 assert len(processed_pages) == len(doc.pages)
                 assert len(processed_pages) == 1  # Sample PDF has only one page
-                
+
                 # Verify set_blocks was called with the correct data
                 assert len(set_blocks_calls) >= 1  # Should be called at least once
-                
+
                 # Check the content of the page
                 page0_blocks = None
-                
+
                 for blocks in set_blocks_calls:
                     if blocks and len(blocks) > 0:
                         if blocks[0].get("lines", []) and blocks[0]["lines"][0].get("content") == "Page 0 content":
                             page0_blocks = blocks
-                
+
                 assert page0_blocks is not None, "Page 0 blocks not found in set_blocks calls"
-                
+
                 # Verify the content of the processed page
                 assert processed_pages[0].blocks[0].lines[0].content == "Page 0 content"
-                
+
                 # Verify S3 cleanup was called
                 mock_delete_from_s3.assert_called_once()
-                
+
         finally:
             # Shut down the server
             server.shutdown()
@@ -852,89 +845,91 @@ class TestPDFDocumentRemote:
     def test_real_runpod_streaming_with_real_document(self, mock_delete_from_s3):
         """
         Test the full streaming flow with a real document and real RunPod requests.
-        
+
         This test uses the actual test PDF document and makes real requests to RunPod,
         only mocking the S3 operations. It verifies that the streaming functionality
         works correctly with the real implementation.
         """
         # Skip this test if no API key or endpoint ID is available
         import os
+
         from docketanalyzer_ocr.remote import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
-        
+
         if not RUNPOD_API_KEY or not RUNPOD_ENDPOINT_ID:
             pytest.skip("RunPod API key or endpoint ID not available")
-        
+
         # Load the real test PDF document
-        test_pdf_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
-                                     "docketanalyzer_ocr", "setup", "test.pdf")
-        
+        test_pdf_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "docketanalyzer_ocr", "setup", "test.pdf"
+        )
+
         if not os.path.exists(test_pdf_path):
             pytest.skip(f"Test PDF not found at {test_pdf_path}")
-        
+
         with open(test_pdf_path, "rb") as f:
             test_pdf_bytes = f.read()
-        
+
         # Create a real PDFDocument with remote=True
         with patch("docketanalyzer_ocr.document.upload_to_s3") as mock_upload_to_s3:
             # Mock S3 upload to return success
             mock_upload_to_s3.return_value = True
-            
+
             # Create the document with remote=True
             doc = PDFDocument(test_pdf_bytes, filename="test.pdf", remote=True)
-            
+
             # Create a tracking mechanism for set_blocks calls
             set_blocks_calls = []
             processed_pages = []
-            
+
             # Apply spies to all pages to track when set_blocks is called
             for page in doc.pages:
                 original_set_blocks = page.set_blocks
-                
+
                 def spy_set_blocks(blocks, page_idx=page.i):
                     set_blocks_calls.append((page_idx, blocks))
                     return original_set_blocks(blocks)
-                
+
                 page.set_blocks = spy_set_blocks
-            
+
             # Start a timer to measure how long the streaming takes
             start_time = time.time()
-            
+
             # Process the document and collect pages
             for page in doc.stream(batch_size=1):
                 processed_pages.append(page)
                 print(f"Processed page {page.i}")
-            
+
             # Calculate elapsed time
             elapsed_time = time.time() - start_time
-            
+
             # Verify results
             assert len(processed_pages) == len(doc.pages)
             assert len(processed_pages) > 0
-            
+
             # Verify set_blocks was called for each page
             assert len(set_blocks_calls) >= len(doc.pages)
-            
+
             # Verify the content of the processed pages
             for page in processed_pages:
-                assert hasattr(page, 'blocks')
+                assert hasattr(page, "blocks")
                 assert len(page.blocks) > 0
-                
+
                 # Check that at least one block has text content
                 has_text = False
                 for block in page.blocks:
                     if block.block_type == "text" and len(block.lines) > 0:
                         has_text = True
                         break
-                
+
                 assert has_text, f"Page {page.i} has no text content"
-            
+
             # Verify S3 cleanup was called
             mock_delete_from_s3.assert_called_once()
-            
+
             # Print some statistics about the test
             print(f"Test completed in {elapsed_time:.2f} seconds")
             print(f"Processed {len(processed_pages)} pages")
             print(f"Received {len(set_blocks_calls)} set_blocks calls")
-            
+
             # The test should take a reasonable amount of time for real streaming
             assert elapsed_time > 1.0, "Test completed too quickly for real streaming"
