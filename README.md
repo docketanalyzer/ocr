@@ -37,9 +37,9 @@ See `.github/workflows/ci.yml` for configuration details.
 
 ### Code Coverage
 
-```markdown
-[![codecov](https://codecov.io/gh/docketanalyzer/ocr/branch/main/graph/badge.svg)](https://codecov.io/gh/docketanalyzer/ocr)
-```
+
+[![codecov](https://codecov.io/gh/docketanalyzer/ocr/graph/badge.svg?token=XRATNOME24)](https://codecov.io/gh/docketanalyzer/ocr)
+
 
 ### GitHub Secrets
 

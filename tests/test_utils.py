@@ -22,7 +22,7 @@ class TestS3Functions:
         # Assertions
         assert result is True
         mock_s3_client.upload_file.assert_called_once_with(
-            str(mock_s3_file), os.getenv("S3_BUCKET_NAME", "default-bucket"), "test/file.txt"
+            str(mock_s3_file), os.getenv("S3_BUCKET_NAME"), "test/file.txt"
         )
 
     @patch("docketanalyzer_ocr.utils.s3_client")
@@ -62,7 +62,7 @@ class TestS3Functions:
         # Assertions
         assert result == local_path
         mock_s3_client.download_file.assert_called_once_with(
-            os.getenv("S3_BUCKET_NAME", "default-bucket"), s3_key, str(local_path)
+            os.getenv("S3_BUCKET_NAME"), s3_key, str(local_path)
         )
 
     @patch("docketanalyzer_ocr.utils.s3_client")
@@ -77,7 +77,7 @@ class TestS3Functions:
         # Assertions
         assert result.name == "file.txt"
         mock_s3_client.download_file.assert_called_once_with(
-            os.getenv("S3_BUCKET_NAME", "default-bucket"), s3_key, "file.txt"
+            os.getenv("S3_BUCKET_NAME"), s3_key, "file.txt"
         )
 
     @patch("docketanalyzer_ocr.utils.s3_client")
