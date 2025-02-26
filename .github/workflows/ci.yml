@@ -7,10 +7,19 @@ on:
     branches: [ main, master ]
 
 jobs:
-  lint:
+  lint-and-autofix:
+    # Skip this job if the commit was already made by GitHub Actions to prevent infinite loops
+    if: "!contains(github.event.head_commit.message, 'Auto-fix linting issues')"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v3
+        with:
+          # For PRs, checkout the head ref; for pushes, use the default behavior
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || '' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -23,14 +32,61 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruff
       
-      - name: Lint with Ruff
+      # First try to check if linting passes without fixes
+      - name: Check linting
+        id: lint_check
+        continue-on-error: true
         run: |
           ruff format --check .
           ruff check .
+      
+      # If linting failed, try to fix it
+      - name: Auto-fix with Ruff
+        if: steps.lint_check.outcome == 'failure'
+        run: |
+          # Run format and fix what can be fixed automatically
+          ruff format .
+          ruff check --fix .
+      
+      # Verify that linting now passes after fixes
+      - name: Verify linting
+        if: steps.lint_check.outcome == 'failure'
+        run: |
+          ruff format --check .
+          ruff check .
+      
+      # Commit any changes made by the auto-fix
+      - name: Commit changes
+        id: auto_commit
+        if: steps.lint_check.outcome == 'failure'
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Auto-fix linting issues"
+          commit_user_name: "GitHub Actions"
+          commit_user_email: "actions@github.com"
+          commit_author: "GitHub Actions <actions@github.com>"
+          # Only commit if there are changes
+          skip_dirty_check: false
+      
+      # Add a comment to the PR if changes were made
+      - name: Add PR comment
+        if: steps.auto_commit.outputs.changes_detected == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ I automatically fixed some linting issues in this pull request. The CI workflow will now run again with these fixes.'
+            })
 
   test:
+    needs: lint-and-autofix
+    # Only run tests if linting passed or was auto-fixed successfully
+    if: always() && needs.lint-and-autofix.result == 'success'
     runs-on: ubuntu-latest
-    needs: lint
     env:
       RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
       RUNPOD_ENDPOINT_ID: ${{ secrets.RUNPOD_ENDPOINT_ID }}
@@ -40,6 +96,9 @@ jobs:
       S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          # For PRs, checkout the head ref; for pushes, use the default behavior
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || '' }}
       
       - name: Set up Python
         uses: actions/setup-python@v4

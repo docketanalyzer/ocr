@@ -1,7 +1,7 @@
 import json
 import time
 from typing import Any, Dict, Generator, List, Optional, Union
-
+import pandas as pd
 import requests
 
 from .utils import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
