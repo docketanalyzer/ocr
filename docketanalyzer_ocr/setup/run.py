@@ -4,7 +4,9 @@ This script serves as the main entry point for the Docket Analyzer OCR module
 when run directly. It demonstrates basic usage by processing a test PDF file
 and printing the extracted text from each page.
 """
+
 from pathlib import Path
+
 from docketanalyzer_ocr import process_pdf
 
 if __name__ == "__main__":
