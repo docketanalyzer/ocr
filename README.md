@@ -35,6 +35,12 @@ The workflow runs on pushes and PRs to main/master branches. Auto-fixes are only
 
 See `.github/workflows/ci.yml` for configuration details.
 
+### Code Coverage
+
+```markdown
+[![codecov](https://codecov.io/gh/docketanalyzer/ocr/branch/main/graph/badge.svg)](https://codecov.io/gh/docketanalyzer/ocr)
+```
+
 ### GitHub Secrets
 
 Required secrets for CI:
@@ -44,6 +50,7 @@ Required secrets for CI:
 - `AWS_SECRET_ACCESS_KEY`
 - `S3_BUCKET_NAME`
 - `S3_ENDPOINT_URL`
+- `CODECOV_TOKEN` (only for private repositories)
 
 Add these in your repository's Settings > Secrets and variables > Actions.
 
