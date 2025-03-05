@@ -102,3 +102,6 @@ RUNPOD_OCR_ENDPOINT_ID=...
 ```
 
 Usage is otherwise identical, just use the remote flag.
+
+
+[![codecov](https://codecov.io/gh/docketanalyzer/ocr/graph/badge.svg?token=XRATNOME24)](https://codecov.io/gh/docketanalyzer/ocr)
