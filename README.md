@@ -53,6 +53,19 @@ item.bbox # Bounding box (blocks and lines only)
 item.clip() # Extract an image from the original pdf
 ```
 
+Save and load data:
+
+```python
+# Saving a document
+with open('saved.json', 'w') as f:
+    f.write(json.dumps(doc.data))
+
+# Loading a document
+with open('saved.json', 'r') as f:
+    data = json.loads(f.read())
+doc = pdf_document(path, load=data)
+```
+
 # Remote Usage
 
 You can also serve this tool with Docker.
