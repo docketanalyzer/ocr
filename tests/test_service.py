@@ -72,6 +72,7 @@ def service_process():
     logger.info("Creating service process")
 
     import multiprocessing as mp
+
     mp.set_start_method("spawn", force=True)
     process = mp.Process(target=run_server)
 
