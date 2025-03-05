@@ -1,6 +1,6 @@
-# DocketAnalyzer OCR Tests
+# Docket Analyzer OCR Tests
 
-This directory contains unit tests for the DocketAnalyzer OCR package.
+This directory contains unit tests for the Docket Analyzer OCR package.
 
 ## Test Structure
 
@@ -10,49 +10,20 @@ The tests are organized by module:
 - `test_ocr.py`: Tests for OCR functionality
 - `test_layout.py`: Tests for layout analysis functionality
 - `test_utils.py`: Tests for utility functions
-- `test_extract_tess.py`: Tests for Tesseract OCR extraction
-- `test_integration.py`: Integration tests for the full OCR pipeline
+- `test_remote.py`: Tests for remote processing functionality
+- `test_service.py`: Tests for the OCR service API endpoints
 
-## Running Tests
-
-To run all tests:
+## Running Tests and Code Coverage
 
 ```bash
-cd /path/to/project/ocr
-pytest tests/
+pytest --cov=docketanalyzer_ocr tests/ --cov-report=xml --cov-branch --junitxml=junit.xml -o junit_family=legacy
 ```
 
-To run a specific test file:
+## Code Quality
 
 ```bash
-pytest tests/test_document.py
+ruff format . && ruff check --fix .
 ```
-
-To run a specific test:
-
-```bash
-pytest tests/test_document.py::TestDocumentHelpers::test_page_to_image
-```
-
-## Test Coverage
-
-To run tests with coverage:
-
-```bash
-pytest --cov=docketanalyzer_ocr tests/
-```
-
-## Required Dependencies
-
-The tests require the following dependencies:
-
-- pytest
-- pytest-cov (for coverage reports)
-- unittest.mock
-- numpy
-- PIL
-- PyMuPDF (fitz)
-- pandas
 
 ## Test Fixtures
 
@@ -61,10 +32,4 @@ The tests use fixtures defined in `conftest.py`:
 - `sample_pdf_bytes`: A simple PDF file in memory
 - `sample_pdf_path`: A temporary PDF file on disk
 - `sample_image`: A sample image for OCR testing
-- `mock_ocr_result`: Mock OCR result data
-- `mock_layout_result`: Mock layout analysis result data
-- `mock_s3_file`: Mock S3 file data
-
-## Adding New Tests
-
-When adding new functionality to the package, please add corresponding tests following the existing patterns. 
+- `test_pdf_path`: Path to the real test PDF document

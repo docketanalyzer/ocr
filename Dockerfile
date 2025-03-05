@@ -18,4 +18,4 @@ RUN pip install --no-cache-dir '.[gpu]'
 
 RUN python docketanalyzer_ocr/setup/run.py
 
-CMD [ "python", "-u", "handler.py" ]
+CMD [ "uvicorn", "service:app", "--host", "0.0.0.0", "--port", "8000" ]

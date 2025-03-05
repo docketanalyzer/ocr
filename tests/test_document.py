@@ -9,7 +9,7 @@ from docketanalyzer_ocr.document import (
     PDFDocument,
     extract_native_text,
     page_to_image,
-    process_pdf,
+    pdf_document,
 )
 
 
@@ -81,7 +81,7 @@ class TestDocumentCore:
     def test_document_save_load(self, sample_pdf_bytes):
         """Test saving and loading document data."""
         # Process document
-        doc = process_pdf(sample_pdf_bytes, filename="test.pdf").process()
+        doc = pdf_document(sample_pdf_bytes, filename="test.pdf").process()
 
         # Save to temporary file
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:

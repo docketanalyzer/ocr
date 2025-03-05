@@ -8,8 +8,8 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
-from .remote import RunPodClient
-from .utils import delete_from_s3, upload_to_s3
+from .remote import RemoteClient
+from .utils import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, delete_from_s3, upload_to_s3
 
 
 def page_to_image(page: fitz.Page, dpi: int = 200) -> np.ndarray:
@@ -73,12 +73,10 @@ def has_images(page: fitz.Page) -> bool:
     Returns:
         bool: True if the page contains images of a significant size, False otherwise.
     """
-    # Get all images on the page
     image_list = page.get_images(full=True)
 
-    # Check if there are any images that meet the size criteria
-    for img_index, img_info in enumerate(image_list):
-        xref = img_info[0]  # Get the xref of the image
+    for _, img_info in enumerate(image_list):
+        xref = img_info[0]
         base_image = page.parent.extract_image(xref)
 
         if base_image:
@@ -99,13 +97,11 @@ def has_text_annotations(page: fitz.Page) -> bool:
     Returns:
         bool: True if the page has text-containing annotations, False otherwise.
     """
-    # Get all annotations on the page
     annots = page.annots()
 
     if annots:
         for annot in annots:
-            # Check for FreeText or Widget annotations
-            annot_type = annot.type[1]  # Get the annotation type
+            annot_type = annot.type[1]
             if annot_type in [fitz.PDF_ANNOT_FREE_TEXT, fitz.PDF_ANNOT_WIDGET]:
                 return True
 
@@ -203,6 +199,8 @@ class DocumentComponent:
         Returns:
             PDFDocument: The parent document.
         """
+        if isinstance(self, Page):
+            return self._doc
         return self.parent.doc
 
     @property
@@ -456,15 +454,6 @@ class Page(DocumentComponent):
         return clip
 
     @property
-    def doc(self) -> "PDFDocument":
-        """Gets the document this page belongs to.
-
-        Returns:
-            PDFDocument: The parent document.
-        """
-        return self._doc
-
-    @property
     def data(self) -> dict:
         """Gets a dictionary representation of this page.
 
@@ -488,7 +477,7 @@ class PDFDocument:
         filename: The name of the PDF file.
         dpi: The resolution to use when rendering pages for OCR.
         pages: The list of Page components in the document.
-        remote: Whether to use remote processing via RunPod.
+        remote: Whether to use remote processing via RemoteClient.
     """
 
     def __init__(
@@ -497,6 +486,8 @@ class PDFDocument:
         filename: Optional[str] = None,
         dpi: int = 200,
         remote: bool = False,
+        api_key: Optional[str] = None,
+        endpoint_url: Optional[str] = None,
     ):
         """Initializes a new PDFDocument.
 
@@ -504,7 +495,9 @@ class PDFDocument:
             file_or_path: The PDF file content as bytes, or a path to the PDF file.
             filename: Optional name for the PDF file.
             dpi: The resolution to use when rendering pages for OCR. Defaults to 200.
-            remote: Whether to use remote processing via RunPod. Defaults to False.
+            remote: Whether to use remote processing via RemoteClient. Defaults to False.
+            api_key: Optional API key for remote processing.
+            endpoint_url: Optional full endpoint URL for remote processing.
         """
         if isinstance(file_or_path, bytes):
             self.doc = fitz.open("pdf", file_or_path)
@@ -518,31 +511,34 @@ class PDFDocument:
         self.dpi = dpi
         self.remote = remote
         self.pages = [Page(self, i) for i in range(len(self.doc))]
-        self._runpod_client = None
+        self._remote_client = None
         self._s3_key = None
+        self._api_key = api_key
+        self._endpoint_url = endpoint_url
 
     @property
-    def runpod_client(self) -> RunPodClient:
-        """Gets or creates the RunPod client.
+    def remote_client(self) -> RemoteClient:
+        """Gets or creates the remote client.
 
         Returns:
-            RunPodClient: The RunPod client instance.
+            RemoteClient: The remote client instance.
         """
-        if self._runpod_client is None:
-            self._runpod_client = RunPodClient()
-        return self._runpod_client
+        if self._remote_client is None:
+            self._remote_client = RemoteClient(api_key=self._api_key, endpoint_url=self._endpoint_url)
+        return self._remote_client
 
     def _upload_to_s3(self) -> str:
         """Uploads the PDF to S3 with a random filename under the 'ocr' folder.
 
         Returns:
             str: The S3 key where the file was uploaded.
-        """
-        # Generate a random filename to avoid collisions
-        random_id = str(uuid.uuid4())
-        s3_key = f"ocr/{random_id}_{self.filename}"
 
-        # If we have the PDF as bytes, write it to a temporary file first
+        Raises:
+            ValueError: If the upload to S3 fails.
+        """
+        random_id = str(uuid.uuid4())
+        s3_key = f"tmp/{random_id}_{self.filename}"
+
         if self.pdf_bytes is not None:
             with Path(f"/tmp/{random_id}.pdf").open("wb") as f:
                 f.write(self.pdf_bytes)
@@ -562,71 +558,65 @@ class PDFDocument:
         self._s3_key = s3_key
         return s3_key
 
-    def stream(self, batch_size: int = 1) -> Generator[Page, None, None]:
+    def stream(self, batch_size: int = 1, s3: bool = True) -> Generator[Page, None, None]:
         """Processes the document page by page and yields each processed page.
 
         This is a generator that processes pages in batches and yields each page
-        after it has been processed. If remote=True, uses the RunPod client for processing.
+        after it has been processed. If remote=True, uses the RemoteClient for processing.
 
         Args:
             batch_size: Number of pages to process in each batch. Defaults to 1.
+            s3: Whether to upload the PDF to S3 for remote processing. Defaults to True.
 
         Yields:
             Page: Each processed page.
         """
         if self.remote:
-            # Use remote processing via RunPod
             try:
-                # Upload the PDF to S3
-                s3_key = self._upload_to_s3()
+                s3_key, file = None, None
+                if s3 and AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
+                    s3_key = self._upload_to_s3()
+                else:
+                    file = self.pdf_bytes or Path(self.pdf_path).read_bytes()
 
-                # Call the RunPod endpoint with the S3 key
-                for result in self.runpod_client(s3_key=s3_key, filename=self.filename, batch_size=batch_size):
-                    # Handle the nested response format from RunPod
+                for result in self.remote_client(
+                    file=file, s3_key=s3_key, filename=self.filename, batch_size=batch_size
+                ):
                     if "stream" in result:
-                        # Process each item in the stream array
                         for stream_item in result["stream"]:
                             if "output" in stream_item and "page" in stream_item["output"]:
                                 page_data = stream_item["output"]["page"]
                                 page_idx = page_data.get("i", 0)
 
-                                # Update the page with the received data
                                 if page_idx < len(self.pages):
                                     self.pages[page_idx].set_blocks(page_data.get("blocks", []))
                                     yield self.pages[page_idx]
 
-                    # Check for completion status
                     status = result.get("status")
                     if status in ["COMPLETED", "FAILED", "CANCELLED"]:
                         break
 
-                    # Also check for status in the stream items
                     if "stream" in result:
                         for stream_item in result["stream"]:
                             if stream_item.get("output", {}).get("status") in ["COMPLETED", "FAILED", "CANCELLED"]:
                                 break
             finally:
-                # Clean up the S3 file after processing
                 if self._s3_key:
                     delete_from_s3(self._s3_key)
                     self._s3_key = None
         else:
-            # Use local processing
             for i in tqdm(range(0, len(self.doc), batch_size), desc="Processing PDF"):
                 batch_pages = []
                 batch_imgs = []
 
-                # Prepare batch
                 for j in range(i, min(i + batch_size, len(self.doc))):
                     page = self.doc[j]
                     self.pages[j].img = page_to_image(page, self.dpi)
                     batch_pages.append(page)
                     batch_imgs.append(self.pages[j].img)
 
-                    # Extract native text
                     self.pages[j].extracted_text = extract_native_text(page)
 
-                    # Check if OCR is needed
                     self.pages[j].needs_ocr = page_needs_ocr(page)
                     if not self.pages[j].needs_ocr:
                         self.pages[j].set_blocks(
@@ -640,7 +630,6 @@ class PDFDocument:
                             ]
                         )
 
-                # Process OCR for pages that need it
                 for j in range(len(batch_pages)):
                     page_idx = i + j
                     if self.pages[page_idx].needs_ocr:
@@ -660,19 +649,20 @@ class PDFDocument:
 
                     yield self.pages[page_idx]
 
-    def process(self, batch_size: int = 1) -> "PDFDocument":
+    def process(self, batch_size: int = 1, s3: bool = True) -> "PDFDocument":
         """Processes the entire document at once.
 
         This method processes all pages in the document and returns the document itself.
-        If remote=True, uses the RunPod client for processing.
+        If remote=True, uses the RemoteClient for processing.
 
         Args:
             batch_size: Number of pages to process in each batch. Defaults to 1.
+            s3: Whether to upload the PDF to S3 for remote processing. Defaults to True.
 
         Returns:
             PDFDocument: The processed document (self).
         """
-        for _ in self.stream(batch_size=batch_size):
+        for _ in self.stream(batch_size=batch_size, s3=s3):
             pass
         return self
 
@@ -747,12 +737,14 @@ class PDFDocument:
         return len(self.pages)
 
 
-def process_pdf(
+def pdf_document(
     file_or_path: Union[bytes, str, Path],
     filename: Optional[str] = None,
     dpi: int = 200,
     load: Optional[Union[str, Path, dict]] = None,
     remote: bool = False,
+    api_key: Optional[str] = None,
+    endpoint_url: Optional[str] = None,
 ) -> PDFDocument:
     """Processes a PDF file for text extraction.
 
@@ -764,12 +756,16 @@ def process_pdf(
         filename: Optional name for the PDF file.
         dpi: The resolution to use when rendering pages for OCR. Defaults to 200.
         load: Optional path to a JSON file or dictionary with existing document data to load.
-        remote: Whether to use remote processing via RunPod. Defaults to False.
+        remote: Whether to use remote processing via RemoteClient. Defaults to False.
+        api_key: Optional API key for remote processing.
+        endpoint_url: Optional full endpoint URL for remote processing.
 
     Returns:
         PDFDocument: The created (and possibly processed) document.
     """
-    doc = PDFDocument(file_or_path, filename=filename, dpi=dpi, remote=remote)
+    doc = PDFDocument(
+        file_or_path, filename=filename, dpi=dpi, remote=remote, api_key=api_key, endpoint_url=endpoint_url
+    )
 
     if load is not None:
         doc.load(load)

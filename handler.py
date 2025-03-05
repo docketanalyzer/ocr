@@ -3,7 +3,7 @@ from typing import Generator
 
 import runpod
 
-from docketanalyzer_ocr import load_pdf, process_pdf
+from docketanalyzer_ocr import load_pdf, pdf_document
 
 
 def handler(event: dict) -> Generator[dict, None, None]:
@@ -43,7 +43,7 @@ def handler(event: dict) -> Generator[dict, None, None]:
             raise ValueError("Neither 's3_key' nor 'file' provided in input")
 
         # Process the PDF using the binary data
-        doc = process_pdf(pdf_data, filename=filename)
+        doc = pdf_document(pdf_data, filename=filename)
         completed = 0
         for page in doc.stream(batch_size=batch_size):
             completed += 1

@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 RUNPOD_API_KEY = os.getenv("RUNPOD_API_KEY")
-RUNPOD_ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID")
+RUNPOD_OCR_ENDPOINT_ID = os.getenv("RUNPOD_OCR_ENDPOINT_ID")
 
 
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")

@@ -11,16 +11,16 @@ Main components:
 - Utility functions for file handling
 
 Main entry points:
-- process_pdf: Process a PDF file and extract text
+- pdf_document: Process a PDF file and extract text
 - load_pdf: Load a PDF file from various sources
 """
 
-from .document import PDFDocument, process_pdf
+from .document import PDFDocument, pdf_document
 from .utils import download_from_s3, load_pdf, upload_to_s3
 
 __all__ = [
     "PDFDocument",
-    "process_pdf",
+    "pdf_document",
     "upload_to_s3",
     "download_from_s3",
     "load_pdf",

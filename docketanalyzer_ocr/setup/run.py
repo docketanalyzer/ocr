@@ -7,11 +7,11 @@ and printing the extracted text from each page.
 
 from pathlib import Path
 
-from docketanalyzer_ocr import process_pdf
+from docketanalyzer_ocr import pdf_document
 
 if __name__ == "__main__":
     # Process a test PDF file and print the extracted text
     path = Path(__file__).parent / "test.pdf"
-    doc = process_pdf(path)
+    doc = pdf_document(path)
     for page in doc.stream():
         print(page.text)

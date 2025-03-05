@@ -1,39 +1,40 @@
+import base64
 import json
 import time
 from typing import Any, Dict, Generator, List, Optional, Union
 
 import requests
 
-from .utils import RUNPOD_API_KEY, RUNPOD_ENDPOINT_ID
+from .utils import RUNPOD_API_KEY, RUNPOD_OCR_ENDPOINT_ID
 
 
-class RunPodClient:
-    """Client for making API calls to RunPod endpoints.
+class RemoteClient:
+    """Client for making API calls to remote endpoints.
 
-    This class handles communication with RunPod serverless endpoints, including
+    This class handles communication with remote serverless endpoints, including
     authentication, request formatting, and streaming response handling.
     """
 
-    def __init__(self, api_key: Optional[str] = None, endpoint_id: Optional[str] = None):
-        """Initialize the RunPod client.
+    def __init__(self, api_key: Optional[str] = None, endpoint_url: Optional[str] = None):
+        """Initialize the remote client.
 
         Args:
-            api_key: RunPod API key. If None, uses RUNPOD_API_KEY from environment.
-            endpoint_id: RunPod endpoint ID. If None, uses RUNPOD_ENDPOINT_ID from environment.
-
-        Raises:
-            ValueError: If API key or endpoint ID is not provided and not in environment.
+            api_key: API key for authentication. If None, uses RUNPOD_API_KEY from environment.
+            endpoint_url: Full endpoint URL. If None, constructs URL from
+                RUNPOD_OCR_ENDPOINT_ID or defaults to localhost.
         """
         self.api_key = api_key or RUNPOD_API_KEY
-        self.endpoint_id = endpoint_id or RUNPOD_ENDPOINT_ID
 
-        if not self.api_key:
-            raise ValueError("RunPod API key not provided and not found in environment")
-        if not self.endpoint_id:
-            raise ValueError("RunPod endpoint ID not provided and not found in environment")
+        if endpoint_url:
+            self.base_url = endpoint_url
+        elif RUNPOD_OCR_ENDPOINT_ID:
+            self.base_url = f"https://api.runpod.ai/v2/{RUNPOD_OCR_ENDPOINT_ID}"
+        else:
+            self.base_url = "http://localhost:8000"
 
-        self.base_url = f"https://api.runpod.ai/v2/{self.endpoint_id}"
-        self.headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        self.headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            self.headers["Authorization"] = f"Bearer {self.api_key}"
 
     def __call__(
         self,
@@ -46,11 +47,11 @@ class RunPodClient:
         poll_interval: float = 1.0,
         **extra_params,
     ) -> Union[List[Dict[str, Any]], Generator[Dict[str, Any], None, None]]:
-        """Make a request to the RunPod endpoint.
+        """Make a request to the remote endpoint.
 
         Args:
             s3_key: S3 key to the PDF file. Either s3_key or file must be provided.
-            file: Binary PDF data. Either s3_key or file must be provided.
+            file: Binary PDF data or base64-encoded string. Either s3_key or file must be provided.
             filename: Optional filename for the PDF.
             batch_size: Batch size for processing. Defaults to 1.
             stream: Whether to stream the response. Defaults to True.
@@ -63,46 +64,41 @@ class RunPodClient:
             If stream=False, returns a list of all response chunks.
 
         Raises:
-            requests.RequestException: If the request fails.
-            ValueError: If the response format is invalid or neither s3_key nor file is provided.
+            ValueError: If neither s3_key nor file is provided.
             TimeoutError: If the request times out.
         """
         if not s3_key and not file:
             raise ValueError("Either s3_key or file must be provided")
 
-        # Construct the payload
         input_data = {"batch_size": batch_size}
 
         if s3_key:
             input_data["s3_key"] = s3_key
         if file:
+            if isinstance(file, bytes):
+                file = base64.b64encode(file).decode("utf-8")
             input_data["file"] = file
         if filename:
             input_data["filename"] = filename
 
-        # Add any extra parameters
         input_data.update(extra_params)
 
         payload = {"input": input_data}
 
-        # Submit job and get job_id
         job_id = self._submit_job(payload, timeout)
 
         if stream:
-            # Stream results for the job
             return self._stream_results(job_id, timeout, poll_interval)
         else:
-            # Accumulate all streaming results and return as a list
             results = []
             for chunk in self._stream_results(job_id, timeout, poll_interval):
                 results.append(chunk)
-                # Check if this is the final chunk with COMPLETED status
                 if chunk.get("status") == "COMPLETED":
                     break
             return results
 
     def _submit_job(self, payload: Dict[str, Any], timeout: int) -> str:
-        """Submit a job to the RunPod endpoint.
+        """Submit a job to the remote endpoint.
 
         Args:
             payload: The request payload.
@@ -113,7 +109,7 @@ class RunPodClient:
 
         Raises:
             requests.RequestException: If the request fails.
-            ValueError: If the response format is invalid.
+            ValueError: If the response format is invalid or cannot be parsed.
         """
         url = f"{self.base_url}/run"
 
@@ -152,7 +148,6 @@ class RunPodClient:
             try:
                 with requests.post(url, headers=self.headers, stream=True, timeout=timeout) as response:
                     if response.status_code == 200:
-                        # Process the streaming response
                         for line in response.iter_lines():
                             if not line:
                                 continue
@@ -160,13 +155,11 @@ class RunPodClient:
                             try:
                                 data = json.loads(line.decode("utf-8"))
 
-                                # Check if this is the final chunk
                                 if data.get("status") == "COMPLETED":
                                     completed = True
 
                                 yield data
 
-                                # If we got a completion or error status, we're done
                                 if data.get("status") in ["COMPLETED", "FAILED", "CANCELLED"]:
                                     return
 
@@ -174,13 +167,11 @@ class RunPodClient:
                                 raise ValueError(f"Failed to parse response: {e}")
 
                     elif response.status_code == 404:
-                        # Job not ready yet, wait and retry
                         time.sleep(poll_interval)
                     else:
                         response.raise_for_status()
 
             except requests.exceptions.ChunkedEncodingError:
-                # Connection was closed prematurely, retry
                 time.sleep(poll_interval)
                 continue
 

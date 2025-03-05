@@ -1,10 +1,10 @@
 from datetime import datetime
 
 from docketanalyzer_ocr.document import PDFDocument
-from docketanalyzer_ocr.remote import RunPodClient
+from docketanalyzer_ocr.remote import RemoteClient
 from docketanalyzer_ocr.utils import (
     RUNPOD_API_KEY,
-    RUNPOD_ENDPOINT_ID,
+    RUNPOD_OCR_ENDPOINT_ID,
 )
 
 
@@ -12,20 +12,27 @@ class TestRemote:
     """Tests for remote processing functionality."""
 
     def test_client_initialization(self):
-        """Test RunPod client initialization."""
-        client = RunPodClient()
+        """Test remote client initialization."""
+        client = RemoteClient()
 
         assert client.api_key == RUNPOD_API_KEY
-        assert client.endpoint_id == RUNPOD_ENDPOINT_ID
-        assert client.base_url == f"https://api.runpod.ai/v2/{RUNPOD_ENDPOINT_ID}"
+        assert client.base_url == f"https://api.runpod.ai/v2/{RUNPOD_OCR_ENDPOINT_ID}"
         assert client.headers == {
             "Authorization": f"Bearer {RUNPOD_API_KEY}",
             "Content-Type": "application/json",
         }
 
+    def test_client_initialization_with_custom_url(self):
+        """Test remote client initialization with custom endpoint URL."""
+        custom_url = "http://example.com/api"
+        client = RemoteClient(endpoint_url=custom_url)
+
+        assert client.base_url == custom_url
+        assert client.headers["Content-Type"] == "application/json"
+
     def test_client_health_check(self):
         """Test client health check."""
-        client = RunPodClient()
+        client = RemoteClient()
         health = client.get_health()
 
         assert isinstance(health, dict)
