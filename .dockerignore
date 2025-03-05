@@ -3,3 +3,4 @@
 !README.md
 !pyproject.toml
 !handler.py
+!service.py

@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from docketanalyzer_ocr import load_pdf, pdf_document
+from docketanalyzer_ocr.utils import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 # Dictionary to store job information
 jobs = {}
@@ -122,6 +123,8 @@ async def process_document(job_id: str, input_data: JobInput):
     try:
         # Load the PDF data
         if input_data.s3_key:
+            if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
+                raise ValueError("You must set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables")
             pdf_data, filename = load_pdf(s3_key=input_data.s3_key, filename=input_data.filename)
         elif input_data.file:
             # Decode base64 file content
