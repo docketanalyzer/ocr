@@ -45,12 +45,19 @@ Pages, blocks, and lines have common attributes:
 ```python
 # where item is a page, block, or line
 
+item.data # A dictionary representation of the item and it's children
 item.text # The item's text content
 item.page_num # The page the item appears on
 item.i # The item-level index
-item.id # A unique id constructed from the item and it's parents index (e.g. 3-2-1 for the first line of the second block of the third page).
+item.id # A unique id constructed from the item and it's parents index (e.g. 3-2-1 for the first line in the second block on the third page).
 item.bbox # Bounding box (blocks and lines only)
-item.clip() # Extract an image from the original pdf
+item.clip() # Extract element as an image from the original pdf
+```
+
+Blocks also have a block type attribute:
+
+```python
+print(block.block_type) # 'title', 'text', 'figure', etc.
 ```
 
 Save and load data:
@@ -97,7 +104,7 @@ S3_BUCKET_NAME=...
 S3_ENDPOINT_URL=...
 ```
 
-Usage is identical. We default to using S3 if available. You can disable this by passing `s3=False` to `process` or `stream`.
+Usage is identical. We default to using S3 if credentials are available. You can disable this by passing `s3=False` to `process` or `stream`.
 
 # Serverless Support
 

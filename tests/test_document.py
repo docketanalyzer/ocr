@@ -63,7 +63,7 @@ class TestDocumentCore:
         doc = fitz.open("pdf", sample_pdf_bytes)
         page = doc[0]
 
-        text_data = extract_native_text(page)
+        text_data = extract_native_text(page, 100)
 
         assert isinstance(text_data, list)
         assert len(text_data) > 0

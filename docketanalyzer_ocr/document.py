@@ -37,13 +37,14 @@ def page_to_image(page: fitz.Page, dpi: int = 200) -> np.ndarray:
     return img
 
 
-def extract_native_text(page: fitz.Page) -> list[dict]:
+def extract_native_text(page: fitz.Page, dpi: int) -> list[dict]:
     """Extracts text content and bounding boxes from a PDF page using native PDF text.
 
     This function extracts text directly from the PDF's internal structure rather than using OCR.
 
     Args:
         page: The pymupdf Page object to extract text from.
+        dpi: The resolution to use when scaling bounding boxes.
 
     Returns:
         list[dict]: A list of dictionaries, each containing:
@@ -55,12 +56,15 @@ def extract_native_text(page: fitz.Page) -> list[dict]:
     for block in blocks:
         if "lines" in block:
             for line in block["lines"]:
-                data.append(
-                    {
-                        "bbox": line["bbox"],
-                        "content": "".join([span["text"] for span in line["spans"]]),
-                    }
-                )
+                content = "".join([span["text"] for span in line["spans"]])
+                if content.strip():
+                    line["bbox"] = [(dpi / 72) * x for x in line["bbox"]]
+                    data.append(
+                        {
+                            "bbox": line["bbox"],
+                            "content": content,
+                        }
+                    )
     return data
 
 
@@ -411,6 +415,15 @@ class Page(DocumentComponent):
         self.needs_ocr = None
         self.set_blocks(blocks)
 
+    @property
+    def fitz(self) -> fitz.Page:
+        """Gets the underlying PyMuPDF page object.
+
+        Returns:
+            fitz.Page: The PyMuPDF page object.
+        """
+        return self._doc.doc[self.i]
+
     def set_blocks(self, blocks: list[dict]) -> None:
         """Sets the blocks for this page.
 
@@ -610,44 +623,42 @@ class PDFDocument:
                 batch_imgs = []
 
                 for j in range(i, min(i + batch_size, len(self.doc))):
-                    page = self.doc[j]
-                    self.pages[j].img = page_to_image(page, self.dpi)
-                    batch_pages.append(page)
-                    batch_imgs.append(self.pages[j].img)
+                    page = self[j]
+                    # Get the image representation of the page
+                    if not page.img:
+                        page.img = page_to_image(page.fitz, self.dpi)
 
-                    self.pages[j].extracted_text = extract_native_text(page)
+                    # Check if we need to OCR the page
+                    page.needs_ocr = page_needs_ocr(page.fitz)
 
-                    self.pages[j].needs_ocr = page_needs_ocr(page)
-                    if not self.pages[j].needs_ocr:
-                        self.pages[j].set_blocks(
-                            [
-                                {
-                                    "bbox": line["bbox"],
-                                    "type": "text",
-                                    "lines": [line],
-                                }
-                                for line in self.pages[j].extracted_text
-                            ]
-                        )
-
-                for j in range(len(batch_pages)):
-                    page_idx = i + j
-                    if self.pages[page_idx].needs_ocr:
+                    if page.needs_ocr:
                         from .ocr import extract_ocr_text
 
-                        self.pages[page_idx].extracted_text = extract_ocr_text(self.pages[page_idx].img)
-                        self.pages[page_idx].set_blocks(
-                            [
-                                {
-                                    "bbox": line["bbox"],
-                                    "type": "text",
-                                    "lines": [line],
-                                }
-                                for line in self.pages[page_idx].extracted_text
-                            ]
-                        )
+                        page.extracted_text = extract_ocr_text(page.img)
+                    else:
+                        page.extracted_text = extract_native_text(page.fitz, dpi=self.dpi)
 
-                    yield self.pages[page_idx]
+                    batch_pages.append(page)
+                    batch_imgs.append(page.img)
+
+                from .layout import boxes_overlap, predict_layout
+
+                layout_data = predict_layout(batch_imgs, batch_size=batch_size)
+
+                for j, page_layout in enumerate(layout_data):
+                    page = batch_pages[j]
+                    lines = page.extracted_text
+                    blocks = []
+                    for block in page_layout:
+                        block_lines = []
+                        for li, line in enumerate(lines):
+                            if boxes_overlap(block["bbox"], line["bbox"]):
+                                block_lines.append(li)
+                        block["lines"] = [lines[li] for li in block_lines]
+                        lines = [line for li, line in enumerate(lines) if li not in block_lines]
+                        blocks.append(block)
+                    page.set_blocks(blocks)
+                    yield page
 
     def process(self, batch_size: int = 1, s3: bool = True) -> "PDFDocument":
         """Processes the entire document at once.
@@ -707,6 +718,10 @@ class PDFDocument:
                 self.pages[i].set_blocks(page_data.get("blocks", []))
 
         return self
+
+    def close(self) -> None:
+        """Closes the underlying PyMuPDF document."""
+        self.doc.close()
 
     def __getitem__(self, idx: int) -> Page:
         """Gets a page by index.
