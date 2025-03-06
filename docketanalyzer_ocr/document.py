@@ -58,7 +58,7 @@ def extract_native_text(page: fitz.Page, dpi: int) -> list[dict]:
             for line in block["lines"]:
                 content = "".join([span["text"] for span in line["spans"]])
                 if content.strip():
-                    line["bbox"] = [(dpi / 72) * x for x in line["bbox"]]
+                    line["bbox"] = tuple([(dpi / 72) * x for x in line["bbox"]])
                     data.append(
                         {
                             "bbox": line["bbox"],
