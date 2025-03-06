@@ -155,7 +155,7 @@ def load_model() -> tuple[YOLOv10, str]:
     device = "cpu" if not torch.cuda.is_available() else "cuda"
 
     if LAYOUT_MODEL is None:
-        LAYOUT_MODEL = YOLOv10(BASE_DIR / "models" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt")
+        LAYOUT_MODEL = YOLOv10(BASE_DIR / "models" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt", verbose=False)
         LAYOUT_MODEL.to(device)
 
     return LAYOUT_MODEL, device
@@ -180,7 +180,7 @@ def predict_layout(images: list, batch_size: int = 8) -> list[list[dict]]:
     results = []
     for i in range(0, len(images), batch_size):
         batch = images[i : i + batch_size]
-        preds = model(batch)
+        preds = model(batch, verbose=False)
 
         for pred in preds:
             blocks = []
