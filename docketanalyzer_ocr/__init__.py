@@ -1,10 +1,12 @@
 from .document import PDFDocument, pdf_document
-from .utils import download_from_s3, load_pdf, upload_to_s3
+from .layout import predict_layout
+from .utils import load_pdf, page_needs_ocr, page_to_image
 
 __all__ = [
     "PDFDocument",
-    "pdf_document",
-    "upload_to_s3",
-    "download_from_s3",
     "load_pdf",
+    "page_needs_ocr",
+    "page_to_image",
+    "pdf_document",
+    "predict_layout",
 ]

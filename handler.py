@@ -1,5 +1,5 @@
+from collections.abc import Generator
 from datetime import datetime
-from typing import Generator
 
 import runpod
 
@@ -36,7 +36,9 @@ def handler(event: dict) -> Generator[dict, None, None]:
     try:
         # Load the PDF file (now returns binary data)
         if inputs.get("s3_key"):
-            pdf_data, filename = load_pdf(s3_key=inputs.pop("s3_key"), filename=filename)
+            pdf_data, filename = load_pdf(
+                s3_key=inputs.pop("s3_key"), filename=filename
+            )
         elif inputs.get("file"):
             pdf_data, filename = load_pdf(file=inputs.pop("file"), filename=filename)
         else:
@@ -44,14 +46,12 @@ def handler(event: dict) -> Generator[dict, None, None]:
 
         # Process the PDF using the binary data
         doc = pdf_document(pdf_data, filename=filename)
-        completed = 0
-        for page in doc.stream(batch_size=batch_size):
-            completed += 1
+        for i, page in enumerate(doc.stream(batch_size=batch_size)):
             duration = (datetime.now() - start).total_seconds()
             yield {
                 "page": page.data,
                 "seconds_elapsed": duration,
-                "progress": completed / len(doc),
+                "progress": i / len(doc),
                 "status": "success",
             }
     except Exception as e:

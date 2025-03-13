@@ -1,11 +1,12 @@
 import base64
 import json
 import time
-from typing import Any, Dict, Generator, List, Optional, Union
+from collections.abc import Generator
+from typing import Any
 
 import requests
 
-from .utils import RUNPOD_API_KEY, RUNPOD_OCR_ENDPOINT_ID
+from docketanalyzer_core import env
 
 
 class RemoteClient:
@@ -15,20 +16,21 @@ class RemoteClient:
     authentication, request formatting, and streaming response handling.
     """
 
-    def __init__(self, api_key: Optional[str] = None, endpoint_url: Optional[str] = None):
+    def __init__(self, api_key: str | None = None, endpoint_url: str | None = None):
         """Initialize the remote client.
 
         Args:
-            api_key: API key for authentication. If None, uses RUNPOD_API_KEY from environment.
+            api_key: API key for authentication. If None, uses RUNPOD_API_KEY
+                from environment.
             endpoint_url: Full endpoint URL. If None, constructs URL from
                 RUNPOD_OCR_ENDPOINT_ID or defaults to localhost.
         """
-        self.api_key = api_key or RUNPOD_API_KEY
+        self.api_key = api_key or env.RUNPOD_API_KEY
 
         if endpoint_url:
             self.base_url = endpoint_url
-        elif RUNPOD_OCR_ENDPOINT_ID:
-            self.base_url = f"https://api.runpod.ai/v2/{RUNPOD_OCR_ENDPOINT_ID}"
+        elif env.RUNPOD_OCR_ENDPOINT_ID:
+            self.base_url = f"https://api.runpod.ai/v2/{env.RUNPOD_OCR_ENDPOINT_ID}"
         else:
             self.base_url = "http://localhost:8000"
 
@@ -38,26 +40,27 @@ class RemoteClient:
 
     def __call__(
         self,
-        s3_key: Optional[str] = None,
-        file: Optional[bytes] = None,
-        filename: Optional[str] = None,
+        s3_key: str | None = None,
+        file: bytes | None = None,
+        filename: str | None = None,
         batch_size: int = 1,
         stream: bool = True,
-        timeout: int = 600,
+        timeout: int = 300,
         poll_interval: float = 1.0,
-        **extra_params,
-    ) -> Union[List[Dict[str, Any]], Generator[Dict[str, Any], None, None]]:
+        **kwargs: Any,
+    ) -> list[dict[str, Any]] | Generator[dict[str, Any], None, None]:
         """Make a request to the remote endpoint.
 
         Args:
             s3_key: S3 key to the PDF file. Either s3_key or file must be provided.
-            file: Binary PDF data or base64-encoded string. Either s3_key or file must be provided.
+            file: Binary PDF data or base64-encoded string. Either s3_key or
+                file must be provided.
             filename: Optional filename for the PDF.
             batch_size: Batch size for processing. Defaults to 1.
             stream: Whether to stream the response. Defaults to True.
             timeout: Request timeout in seconds. Defaults to 600 (10 minutes).
             poll_interval: Interval in seconds between status checks. Defaults to 1.0.
-            **extra_params: Additional parameters to include in the input payload.
+            **kwargs: Additional parameters to include in the input payload.
 
         Returns:
             If stream=True, returns a generator yielding response chunks.
@@ -81,7 +84,7 @@ class RemoteClient:
         if filename:
             input_data["filename"] = filename
 
-        input_data.update(extra_params)
+        input_data.update(kwargs)
 
         payload = {"input": input_data}
 
@@ -97,7 +100,7 @@ class RemoteClient:
                     break
             return results
 
-    def _submit_job(self, payload: Dict[str, Any], timeout: int) -> str:
+    def _submit_job(self, payload: dict[str, Any], timeout: int) -> str:
         """Submit a job to the remote endpoint.
 
         Args:
@@ -113,18 +116,19 @@ class RemoteClient:
         """
         url = f"{self.base_url}/run"
 
-        response = requests.post(url, headers=self.headers, json=payload, timeout=timeout)
+        response = requests.post(
+            url, headers=self.headers, json=payload, timeout=timeout
+        )
         response.raise_for_status()
 
-        try:
-            result = response.json()
-            if "id" not in result:
-                raise ValueError(f"Invalid response format, missing 'id': {result}")
-            return result["id"]
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse response: {e}")
+        result = response.json()
+        if "id" not in result:
+            raise ValueError(f"Invalid response format, missing 'id': {result}")
+        return result["id"]
 
-    def _stream_results(self, job_id: str, timeout: int, poll_interval: float) -> Generator[Dict[str, Any], None, None]:
+    def _stream_results(
+        self, job_id: str, timeout: int, poll_interval: float
+    ) -> Generator[dict[str, Any], None, None]:
         """Stream results from a job.
 
         Args:
@@ -142,30 +146,26 @@ class RemoteClient:
         """
         url = f"{self.base_url}/stream/{job_id}"
         start_time = time.time()
-        completed = False
 
-        while not completed and time.time() - start_time < timeout:
+        while time.time() - start_time < timeout:
             try:
-                with requests.post(url, headers=self.headers, stream=True, timeout=timeout) as response:
+                with requests.post(
+                    url, headers=self.headers, stream=True, timeout=timeout
+                ) as response:
                     if response.status_code == 200:
                         for line in response.iter_lines():
                             if not line:
                                 continue
 
-                            try:
-                                data = json.loads(line.decode("utf-8"))
+                            data = json.loads(line.decode("utf-8"))
+                            yield data
 
-                                if data.get("status") == "COMPLETED":
-                                    completed = True
-
-                                yield data
-
-                                if data.get("status") in ["COMPLETED", "FAILED", "CANCELLED"]:
-                                    return
-
-                            except json.JSONDecodeError as e:
-                                raise ValueError(f"Failed to parse response: {e}")
-
+                            if data.get("status") in [
+                                "COMPLETED",
+                                "FAILED",
+                                "CANCELLED",
+                            ]:
+                                return
                     elif response.status_code == 404:
                         time.sleep(poll_interval)
                     else:
@@ -175,10 +175,9 @@ class RemoteClient:
                 time.sleep(poll_interval)
                 continue
 
-        if not completed and time.time() - start_time >= timeout:
-            raise TimeoutError(f"Streaming results timed out after {timeout} seconds")
+        raise TimeoutError(f"Streaming results timed out after {timeout} seconds")
 
-    def get_status(self, job_id: str, timeout: int = 30) -> Dict[str, Any]:
+    def get_status(self, job_id: str, timeout: int = 30) -> dict[str, Any]:
         """Get the status of a job.
 
         Args:
@@ -197,12 +196,9 @@ class RemoteClient:
         response = requests.post(url, headers=self.headers, timeout=timeout)
         response.raise_for_status()
 
-        try:
-            return response.json()
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse response: {e}")
+        return response.json()
 
-    def cancel_job(self, job_id: str, timeout: int = 30) -> Dict[str, Any]:
+    def cancel_job(self, job_id: str, timeout: int = 30) -> dict[str, Any]:
         """Cancel a job.
 
         Args:
@@ -221,12 +217,9 @@ class RemoteClient:
         response = requests.post(url, headers=self.headers, timeout=timeout)
         response.raise_for_status()
 
-        try:
-            return response.json()
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse response: {e}")
+        return response.json()
 
-    def purge_queue(self, timeout: int = 30) -> Dict[str, Any]:
+    def purge_queue(self, timeout: int = 30) -> dict[str, Any]:
         """Purge all queued jobs.
 
         Args:
@@ -244,12 +237,9 @@ class RemoteClient:
         response = requests.post(url, headers=self.headers, timeout=timeout)
         response.raise_for_status()
 
-        try:
-            return response.json()
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse response: {e}")
+        return response.json()
 
-    def get_health(self, timeout: int = 30) -> Dict[str, Any]:
+    def get_health(self, timeout: int = 30) -> dict[str, Any]:
         """Get endpoint health information.
 
         Args:
@@ -267,7 +257,4 @@ class RemoteClient:
         response = requests.get(url, headers=self.headers, timeout=timeout)
         response.raise_for_status()
 
-        try:
-            return response.json()
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse response: {e}")
+        return response.json()

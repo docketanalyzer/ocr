@@ -1,6 +1,4 @@
-archive
-temp.py
-junit.xml
+temp
 
 ### Flask ###
 instance/*

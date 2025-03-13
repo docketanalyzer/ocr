@@ -2,9 +2,9 @@ import asyncio
 import base64
 import json
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI, HTTPException
@@ -60,10 +60,8 @@ async def lifespan(app: FastAPI):
 
     if cleanup_task:
         cleanup_task.cancel()
-        try:
+        with suppress(asyncio.CancelledError):
             await cleanup_task
-        except asyncio.CancelledError:
-            pass
 
 
 app = FastAPI(
@@ -84,9 +82,9 @@ app.add_middleware(
 class JobInput(BaseModel):
     """Input model for job submission."""
 
-    s3_key: Optional[str] = None
-    file: Optional[str] = None  # Base64 encoded file content
-    filename: Optional[str] = None
+    s3_key: str | None = None
+    file: str | None = None  # Base64 encoded file content
+    filename: str | None = None
     batch_size: int = 1
 
 
@@ -106,7 +104,7 @@ class JobStatus(BaseModel):
     """Status model for job status."""
 
     status: str
-    stream: Optional[List[Dict[str, Any]]] = None
+    stream: list[dict[str, Any]] | None = None
 
 
 async def process_document(job_id: str, input_data: JobInput):
@@ -124,8 +122,13 @@ async def process_document(job_id: str, input_data: JobInput):
         # Load the PDF data
         if input_data.s3_key:
             if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
-                raise ValueError("You must set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables")
-            pdf_data, filename = load_pdf(s3_key=input_data.s3_key, filename=input_data.filename)
+                raise ValueError(
+                    "Run `da configure s3` to set AWS_ACCESS_KEY_ID and "
+                    "AWS_SECRET_ACCESS_KEY"
+                )
+            pdf_data, filename = load_pdf(
+                s3_key=input_data.s3_key, filename=input_data.filename
+            )
         elif input_data.file:
             # Decode base64 file content
             pdf_bytes = base64.b64decode(input_data.file)
@@ -135,19 +138,17 @@ async def process_document(job_id: str, input_data: JobInput):
 
         # Process the PDF
         doc = pdf_document(pdf_data, filename=filename)
-        completed = 0
 
         # Stream the results
-        for page in doc.stream(batch_size=input_data.batch_size):
-            completed += 1
+        for i, page in enumerate(doc.stream(batch_size=input_data.batch_size)):
             duration = (datetime.now() - start).total_seconds()
 
-            # Create a stream item with the page data in the format expected by RemoteClient
+            # Create a stream item with the page data for the RemoteClient
             stream_item = {
                 "output": {
                     "page": page.data,
                     "seconds_elapsed": duration,
-                    "progress": completed / len(doc),
+                    "progress": i / len(doc),
                     "status": "success",
                 }
             }
@@ -250,7 +251,9 @@ async def job_status(job_id: str):
 
     return {
         "status": jobs[job_id]["status"],
-        "stream": jobs[job_id]["stream"] if jobs[job_id]["status"] != "PENDING" else None,
+        "stream": jobs[job_id]["stream"]
+        if jobs[job_id]["status"] != "PENDING"
+        else None,
     }
 
 
@@ -282,7 +285,9 @@ async def health_check():
         dict: Health information.
     """
     # Count active jobs
-    active_jobs = sum(1 for job in jobs.values() if job["status"] in ["PENDING", "IN_PROGRESS"])
+    active_jobs = sum(
+        1 for job in jobs.values() if job["status"] in ["PENDING", "IN_PROGRESS"]
+    )
 
     return {
         "workers": {
