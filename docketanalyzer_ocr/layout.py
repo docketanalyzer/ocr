@@ -2,7 +2,6 @@ from .utils import BASE_DIR
 
 LAYOUT_MODEL = None
 
-
 LAYOUT_CHOICES = {
     0: "title",
     1: "text",
@@ -143,7 +142,7 @@ def load_model() -> tuple["YOLOv10", str]:  # noqa: F821
 
     if LAYOUT_MODEL is None:
         LAYOUT_MODEL = YOLOv10(
-            BASE_DIR / "models" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt",
+            BASE_DIR / "data" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt",
             verbose=False,
         )
         LAYOUT_MODEL.to(device)

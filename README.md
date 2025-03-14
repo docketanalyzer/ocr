@@ -2,16 +2,8 @@
 
 ## Installation
 
-Requires Python 3.10
-
 ```bash
-pip install git+https://github.com/docketanalyzer/ocr
-```
-
-To install with GPU support (much faster):
-
-```
-pip install 'git+https://github.com/docketanalyzer/ocr[gpu]'
+pip install 'docketanalyzer[ocr]'
 ```
 
 ## Local Usage
@@ -19,7 +11,7 @@ pip install 'git+https://github.com/docketanalyzer/ocr[gpu]'
 Process a document:
 
 ```python
-from docketanalyzer_ocr import pdf_document
+from docketanalyzer.ocr import pdf_document
 
 path = 'path/to/doc.pdf
 doc = pdf_document(path) # the input can also be raw bytes
@@ -64,13 +56,10 @@ Save and load data:
 
 ```python
 # Saving a document
-with open('saved.json', 'w') as f:
-    f.write(json.dumps(doc.data))
+doc.save('doc.json')
 
 # Loading a document
-with open('saved.json', 'r') as f:
-    data = json.loads(f.read())
-doc = pdf_document(path, load=data)
+doc = pdf_document(path, load='doc.json')
 ```
 
 # Remote Usage
@@ -78,6 +67,7 @@ doc = pdf_document(path, load=data)
 You can also serve this tool with Docker.
 
 ```
+*** add prebuilt container here
 docker build -t docketanalyzer-ocr .
 docker run --gpus all -p 8000:8000 docketanalyzer-ocr
 ```
@@ -95,33 +85,61 @@ for page in doc.stream():
 
 When using the remote service, if you want to avoid sending the file in a POST request, configure your S3 credentials. Your document will be temporarily pushed to your bucket to be retrieved by the service.
 
-Set the following in your environment (both for the client and service):
+To configure your S3 credentials run:
 
 ```
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-S3_BUCKET_NAME=...
-S3_ENDPOINT_URL=...
+da configure s3
 ```
 
-Usage is identical. We default to using S3 if credentials are available. You can disable this by passing `s3=False` to `process` or `stream`.
+Or set the following in your env:
+
+```
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_S3_BUCKET_NAME
+AWS_S3_ENDPOINT_URL
+```
+
+Usage is identical. We default to using S3 if credentials are available. You can control this explicitly by passing `use_s3=False` to `pdf_document`.
 
 # Serverless Support
 
-For serverless usage you can deploy this to RunPod. Just include a custom run command:
+For serverless usage you can deploy this to RunPod. To get set up:
+
+1. Create a serverless worker on RunPod using the docker container.
+
+```
+*** add prebuilt container here
+```
+
+2. Add the following custom run command.
 
 ```
 python -u handler.py
 ```
 
-On the client side, add the following variables to your env:
+3. Add your S3 credentials to the RunPod worker.
 
 ```
-RUNPOD_API_KEY=...
-RUNPOD_OCR_ENDPOINT_ID=...
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_S3_BUCKET_NAME
+AWS_S3_ENDPOINT_URL
 ```
 
-Usage is otherwise identical, just use the remote flag.
+4. On your local machine, configure your RunPod key and the worker id.
 
+You can run:
 
-[![codecov](https://codecov.io/gh/docketanalyzer/ocr/graph/badge.svg?token=XRATNOME24)](https://codecov.io/gh/docketanalyzer/ocr)
+```
+da configure runpod
+```
+
+Or set the following in your env:
+
+```
+RUNPOD_API_KEY
+RUNPOD_OCR_ENDPOINT_ID
+```
+
+Usage is otherwise identical, just use `remote=True` with `pdf_document` 

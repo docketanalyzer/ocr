@@ -4,6 +4,9 @@ from datetime import datetime
 import runpod
 
 from docketanalyzer_ocr import load_pdf, pdf_document
+from docketanalyzer_ocr.ocr import OCR_CLIENT
+
+process = OCR_CLIENT.process
 
 
 def handler(event: dict) -> Generator[dict, None, None]:
@@ -34,7 +37,6 @@ def handler(event: dict) -> Generator[dict, None, None]:
     batch_size = inputs.get("batch_size", 1)
 
     try:
-        # Load the PDF file (now returns binary data)
         if inputs.get("s3_key"):
             pdf_data, filename = load_pdf(
                 s3_key=inputs.pop("s3_key"), filename=filename
@@ -44,7 +46,6 @@ def handler(event: dict) -> Generator[dict, None, None]:
         else:
             raise ValueError("Neither 's3_key' nor 'file' provided in input")
 
-        # Process the PDF using the binary data
         doc = pdf_document(pdf_data, filename=filename)
         for i, page in enumerate(doc.stream(batch_size=batch_size)):
             duration = (datetime.now() - start).total_seconds()
@@ -54,6 +55,7 @@ def handler(event: dict) -> Generator[dict, None, None]:
                 "progress": i / len(doc),
                 "status": "success",
             }
+        doc.close()
     except Exception as e:
         yield {
             "error": str(e),

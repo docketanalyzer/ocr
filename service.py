@@ -13,40 +13,34 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from docketanalyzer_ocr import load_pdf, pdf_document
-from docketanalyzer_ocr.utils import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from docketanalyzer_ocr.ocr import OCR_CLIENT
 
-# Dictionary to store job information
+process = OCR_CLIENT.process
+
 jobs = {}
 
-# Cleanup task reference
 cleanup_task = None
+
+ocr_semaphore = asyncio.Semaphore(1)
 
 
 async def cleanup_old_jobs():
     """Periodically clean up old jobs to prevent memory leaks."""
     while True:
         try:
-            # Wait for 1 hour between cleanups
             await asyncio.sleep(3600)
-
-            # Get current time
             now = datetime.now()
-
-            # Find jobs older than 24 hours
-            old_jobs = []
-            for job_id, job in jobs.items():
-                created_at = datetime.fromisoformat(job["created_at"])
-                if (now - created_at).total_seconds() > 86400:  # 24 hours
-                    old_jobs.append(job_id)
-
-            # Remove old jobs
+            old_jobs = [
+                job_id
+                for job_id, job in jobs.items()
+                if (now - datetime.fromisoformat(job["created_at"])).total_seconds()
+                > 86400
+            ]
             for job_id in old_jobs:
                 del jobs[job_id]
-
         except asyncio.CancelledError:
             break
         except Exception:
-            # Log error and continue
             pass
 
 
@@ -57,6 +51,9 @@ async def lifespan(app: FastAPI):
     cleanup_task = asyncio.create_task(cleanup_old_jobs())
 
     yield
+
+    print("Stopping OCR service...", flush=True)
+    OCR_CLIENT.stop()
 
     if cleanup_task:
         cleanup_task.cancel()
@@ -83,7 +80,7 @@ class JobInput(BaseModel):
     """Input model for job submission."""
 
     s3_key: str | None = None
-    file: str | None = None  # Base64 encoded file content
+    file: str | None = None
     filename: str | None = None
     batch_size: int = 1
 
@@ -119,31 +116,23 @@ async def process_document(job_id: str, input_data: JobInput):
     jobs[job_id]["stream"] = []
 
     try:
-        # Load the PDF data
         if input_data.s3_key:
-            if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
-                raise ValueError(
-                    "Run `da configure s3` to set AWS_ACCESS_KEY_ID and "
-                    "AWS_SECRET_ACCESS_KEY"
-                )
             pdf_data, filename = load_pdf(
                 s3_key=input_data.s3_key, filename=input_data.filename
             )
         elif input_data.file:
-            # Decode base64 file content
             pdf_bytes = base64.b64decode(input_data.file)
             pdf_data, filename = load_pdf(file=pdf_bytes, filename=input_data.filename)
         else:
             raise ValueError("Neither 's3_key' nor 'file' provided in input")
 
-        # Process the PDF
-        doc = pdf_document(pdf_data, filename=filename)
+        async with ocr_semaphore:
+            doc = pdf_document(pdf_data, filename=filename)
+            pages = list(doc.stream(batch_size=input_data.batch_size))
 
-        # Stream the results
-        for i, page in enumerate(doc.stream(batch_size=input_data.batch_size)):
+        for i, page in enumerate(pages):
             duration = (datetime.now() - start).total_seconds()
 
-            # Create a stream item with the page data for the RemoteClient
             stream_item = {
                 "output": {
                     "page": page.data,
@@ -153,17 +142,15 @@ async def process_document(job_id: str, input_data: JobInput):
                 }
             }
 
-            # Add to job stream
             jobs[job_id]["stream"].append(stream_item)
 
-            # Small delay to prevent CPU hogging
             await asyncio.sleep(0.1)
 
-        # Mark job as completed
         jobs[job_id]["status"] = "COMPLETED"
+        doc.close()
 
     except Exception as e:
-        # Handle errors
+        print(f"Error processing job {job_id}: {e}", flush=True)
         error_result = {
             "output": {
                 "error": str(e),
@@ -192,7 +179,6 @@ async def run_job(request: JobRequest, background_tasks: BackgroundTasks):
         "created_at": datetime.now().isoformat(),
     }
 
-    # Start processing in the background
     background_tasks.add_task(process_document, job_id, request.input)
 
     return {"id": job_id}
@@ -211,11 +197,9 @@ async def stream_job(job_id: str):
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
-    # If job is still pending, return 404 to mimic RunPod behavior
     if jobs[job_id]["status"] == "PENDING":
         raise HTTPException(status_code=404, detail="Job not ready yet")
 
-    # Get the current stream position
     stream_position = 0
 
     async def generate():
@@ -284,7 +268,6 @@ async def health_check():
     Returns:
         dict: Health information.
     """
-    # Count active jobs
     active_jobs = sum(
         1 for job in jobs.values() if job["status"] in ["PENDING", "IN_PROGRESS"]
     )

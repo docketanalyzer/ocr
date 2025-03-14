@@ -17,6 +17,7 @@ dependencies = [
     "docketanalyzer-core>=0.1.0",
     "fastapi",
     "huggingface-hub",
+    "numpy<2",
     "pymupdf",
     "runpod",
     "uv",
@@ -25,7 +26,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "docketanalyzer-core[dev]>=0.1.0",
+    "docketanalyzer-core[dev]>=0.1.3",
 ]
 
 [tool.ruff]
@@ -48,3 +49,10 @@ log_cli_level = "INFO"
 addopts = "-ra -q --cov=docketanalyzer_ocr"
 testpaths = ["tests"]
 pythonpath = "."
+filterwarnings = [
+    "ignore::DeprecationWarning:importlib._bootstrap",
+    "ignore::DeprecationWarning:thop.profile",
+    "ignore::DeprecationWarning:setuptools.command.easy_install",
+    "ignore::DeprecationWarning:pkg_resources",
+    "ignore::DeprecationWarning:sys",
+]

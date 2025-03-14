@@ -2,18 +2,23 @@ import atexit
 import base64
 import json
 import os
+import platform
 import shutil
 import signal
 import subprocess
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
+FORCE_GPU = int(os.getenv("FORCE_GPU", 0))
 SCRIPT_PATH = Path(__file__).resolve()
-VENV_SCRIPT_PATH = SCRIPT_PATH.parent / "data" / "venv" / SCRIPT_PATH.name
+VENV_SCRIPT_PATH = (
+    Path.home() / ".cache" / "docketanalyzer" / "ocr" / "venv" / SCRIPT_PATH.name
+)
 OCR_MODEL = None
 
 
@@ -32,7 +37,9 @@ class OCRService:
         """
         import torch
 
-        self.device = device or ("cpu" if not torch.cuda.is_available() else "cuda")
+        self.device = device or (
+            "cpu" if not (torch.cuda.is_available() or FORCE_GPU) else "cuda"
+        )
 
     def process_image(self, image: np.array) -> list[dict]:
         """Extracts text from an image using OCR.
@@ -116,8 +123,8 @@ class OCRServiceClient:
             Defaults to False.
         """
         self._process = None
-        self.initialized = False
         self.verbose = verbose
+        self._lock = threading.Lock()
 
     def install(self):
         """Installs the PaddleOCR package in a virtual environment.
@@ -133,6 +140,7 @@ class OCRServiceClient:
             and VENV_SCRIPT_PATH.read_text() != SCRIPT_PATH.read_text()
         ):
             shutil.rmtree(VENV_SCRIPT_PATH.parent)
+            VENV_SCRIPT_PATH.parent.mkdir(parents=True, exist_ok=True)
         if not VENV_SCRIPT_PATH.exists():
             print("Creating a virtual environment and installing PaddleOCR...")
             subprocess.check_call(
@@ -150,9 +158,9 @@ class OCRServiceClient:
                 "paddleocr",
                 "setuptools",
             ]
-            if torch.cuda.is_available():
+            if torch.cuda.is_available() or FORCE_GPU:
                 cmd.append("paddlepaddle-gpu==2.6.2")
-            elif os.name == "posix":
+            elif platform.system() == "Darwin":
                 cmd.append("paddlepaddle==0.0.0")
                 cmd.append("-f")
                 cmd.append("https://www.paddlepaddle.org.cn/whl/mac/cpu/develop.html")
@@ -176,10 +184,7 @@ class OCRServiceClient:
             RuntimeError: If the OCR service is not running or has failed.
         """
         if self._process is None:
-            if self.initialized:
-                raise RuntimeError("OCR Service is not running")
             print("Starting OCR process...")
-            self.initialized = True
             self.install()
             venv_python = VENV_SCRIPT_PATH.parent / "bin" / "python"
 
@@ -208,28 +213,33 @@ class OCRServiceClient:
 
     def process_image(self, image: np.array) -> list[dict]:
         """Sends an image to the OCR service and retrieves the results."""
-        if self.process.poll() is not None:
-            raise RuntimeError("OCR Service is not running")
+        with self._lock:
+            if self.process.poll() is not None:
+                print("OCR Service terminated unexpectedly. Restarting...")
+                self._process = None
+                if self.process.poll() is not None:
+                    raise RuntimeError("Failed to restart OCR Service")
+                print("OCR Service restarted successfully")
 
-        request = {
-            "image": base64.b64encode(image.tobytes()).decode("utf-8"),
-            "dtype": str(image.dtype),
-            "shape": image.shape,
-        }
+            request = {
+                "image": base64.b64encode(image.tobytes()).decode("utf-8"),
+                "dtype": str(image.dtype),
+                "shape": image.shape,
+            }
 
-        self.process.stdin.write(json.dumps(request) + "\n")
-        self.process.stdin.flush()
+            self.process.stdin.write(json.dumps(request) + "\n")
+            self.process.stdin.flush()
 
-        start = datetime.now()
-        while (datetime.now() - start).total_seconds() < 200:
-            response = self.process.stdout.readline().strip()
-            if response and self.verbose:
-                print(response)
-            if response.startswith("OCR RESULT:"):
-                return json.loads(response[11:])
-            if response.startswith("ERROR:"):
-                raise RuntimeError(response[6:])
-        raise TimeoutError("OCR service timed out")
+            start = datetime.now()
+            while (datetime.now() - start).total_seconds() < 200:
+                response = self.process.stdout.readline().strip()
+                if response and self.verbose:
+                    print(response)
+                if response.startswith("OCR RESULT:"):
+                    return json.loads(response[11:])
+                if response.startswith("ERROR:"):
+                    raise RuntimeError(response[6:])
+            raise TimeoutError("OCR service timed out")
 
     def stop(self, *args: Any):
         """Terminates the OCR service."""

@@ -47,7 +47,7 @@ def load_pdf(
     # Otherwise, we need to download from S3
     with tempfile.NamedTemporaryFile() as temp_file:
         temp_path = Path(temp_file.name)
-        load_s3().download_file(s3_key, str(temp_path))
+        load_s3().download(s3_key, str(temp_path))
         return temp_path.read_bytes(), filename
 
 
