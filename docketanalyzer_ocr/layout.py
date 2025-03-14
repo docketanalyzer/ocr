@@ -1,10 +1,6 @@
-import torch
-from doclayout_yolo import YOLOv10
-
 from .utils import BASE_DIR
 
 LAYOUT_MODEL = None
-
 
 LAYOUT_CHOICES = {
     0: "title",
@@ -37,62 +33,52 @@ def merge_overlapping_blocks(blocks: list[dict]) -> list[dict]:
     if not blocks:
         return []
 
-    # Create a priority map for faster lookup
-    type_priority = {block_type: i for i, block_type in enumerate(LAYOUT_CHOICES.values())}
+    # Merged blocks with different types will get the type with the highest priority
+    type_priority = {
+        block_type: i for i, block_type in enumerate(LAYOUT_CHOICES.values())
+    }
 
-    # Add default priority for any types not in the list (lowest priority)
-    max_priority = len(type_priority)
-
-    # Start with all blocks as unprocessed
     unprocessed = [block.copy() for block in blocks]
     result = []
 
     while unprocessed:
-        # Take a block as the current merged block
         current = unprocessed.pop(0)
         current_bbox = current["bbox"]
 
-        # Flag to check if any merge happened in this iteration
         merged = True
 
         while merged:
             merged = False
 
-            # Check each remaining unprocessed block
             i = 0
             while i < len(unprocessed):
                 other = unprocessed[i]
                 other_bbox = other["bbox"]
 
-                # Check for overlap
                 if boxes_overlap(current_bbox, other_bbox):
-                    # Determine which type to keep based on priority
-                    current_priority = type_priority.get(current["type"], max_priority)
-                    other_priority = type_priority.get(other["type"], max_priority)
+                    current_priority = type_priority[current["type"]]
+                    other_priority = type_priority[other["type"]]
 
-                    # Keep the type with higher priority (lower number)
                     if other_priority < current_priority:
                         current["type"] = other["type"]
 
-                    # Merge the bounding boxes
                     current_bbox = merge_boxes(current_bbox, other_bbox)
                     current["bbox"] = current_bbox
 
-                    # Remove the merged block from unprocessed
                     unprocessed.pop(i)
                     merged = True
                 else:
                     i += 1
 
-        # Add the merged block to the result
         result.append(current)
 
-    # Sort by ymin and then xmin
     result.sort(key=lambda x: (x["bbox"][1], x["bbox"][0]))
     return result
 
 
-def boxes_overlap(box1: tuple[float, float, float, float], box2: tuple[float, float, float, float]) -> bool:
+def boxes_overlap(
+    box1: tuple[float, float, float, float], box2: tuple[float, float, float, float]
+) -> bool:
     """Checks if two bounding boxes overlap.
 
     Args:
@@ -102,17 +88,15 @@ def boxes_overlap(box1: tuple[float, float, float, float], box2: tuple[float, fl
     Returns:
         bool: True if the boxes overlap, False otherwise.
     """
-    # Extract coordinates
     x1_min, y1_min, x1_max, y1_max = box1
     x2_min, y2_min, x2_max, y2_max = box2
 
-    # Check for overlap
-    if x1_max < x2_min or x2_max < x1_min:  # No horizontal overlap
-        return False
-    if y1_max < y2_min or y2_max < y1_min:  # No vertical overlap
-        return False
-
-    return True
+    return not (
+        x1_max < x2_min
+        or x2_max < x1_min  # No horizontal overlap
+        or y1_max < y2_min
+        or y2_max < y1_min  # No vertical overlap
+    )
 
 
 def merge_boxes(
@@ -125,13 +109,12 @@ def merge_boxes(
         box2: Tuple of (xmin, ymin, xmax, ymax) for the second box.
 
     Returns:
-        tuple[float, float, float, float]: A new bounding box that contains both input boxes.
+        tuple[float, float, float, float]: A new bounding box that contains both
+            input boxes.
     """
-    # Extract coordinates
     x1_min, y1_min, x1_max, y1_max = box1
     x2_min, y2_min, x2_max, y2_max = box2
 
-    # Create merged box with min/max coordinates
     merged_box = (
         min(x1_min, x2_min),
         min(y1_min, y2_min),
@@ -142,7 +125,7 @@ def merge_boxes(
     return merged_box
 
 
-def load_model() -> tuple[YOLOv10, str]:
+def load_model() -> tuple["YOLOv10", str]:  # noqa: F821
     """Loads and initializes the document layout detection model.
 
     Returns:
@@ -150,12 +133,18 @@ def load_model() -> tuple[YOLOv10, str]:
             - The initialized YOLOv10 model
             - The device string ('cpu' or 'cuda')
     """
+    import torch
+    from doclayout_yolo import YOLOv10
+
     global LAYOUT_MODEL
 
     device = "cpu" if not torch.cuda.is_available() else "cuda"
 
     if LAYOUT_MODEL is None:
-        LAYOUT_MODEL = YOLOv10(BASE_DIR / "models" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt", verbose=False)
+        LAYOUT_MODEL = YOLOv10(
+            BASE_DIR / "data" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt",
+            verbose=False,
+        )
         LAYOUT_MODEL.to(device)
 
     return LAYOUT_MODEL, device
@@ -187,6 +176,7 @@ def predict_layout(images: list, batch_size: int = 8) -> list[list[dict]]:
             for xyxy, cla in zip(
                 pred.boxes.xyxy,
                 pred.boxes.cls,
+                strict=False,
             ):
                 bbox = [int(p.item()) for p in xyxy]
                 blocks.append(

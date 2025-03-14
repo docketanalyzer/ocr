@@ -1,152 +1,19 @@
 import json
+import tempfile
 import uuid
+from collections.abc import Generator, Iterator
 from pathlib import Path
-from typing import Generator, Iterator, Optional, Union
 
 import fitz
-import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
+from docketanalyzer_core import load_s3
+
+from .layout import boxes_overlap, predict_layout
+from .ocr import extract_ocr_text
 from .remote import RemoteClient
-from .utils import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, delete_from_s3, upload_to_s3
-
-
-def page_to_image(page: fitz.Page, dpi: int = 200) -> np.ndarray:
-    """Converts a PDF page to a numpy image array.
-
-    This function renders a PDF page at the specified DPI and converts it to a numpy array.
-    If the resulting image would be too large, it falls back to a lower resolution.
-
-    Args:
-        page: The pymupdf Page object to convert.
-        dpi: The dots per inch resolution to render at. Defaults to 200.
-
-    Returns:
-        np.ndarray: The page as a numpy array in RGB format.
-    """
-    mat = fitz.Matrix(dpi / 72, dpi / 72)
-    pm = page.get_pixmap(matrix=mat, alpha=False)
-
-    if pm.width > 4500 or pm.height > 4500:
-        pm = page.get_pixmap(matrix=fitz.Matrix(1, 1), alpha=False)
-
-    img = Image.frombytes("RGB", (pm.width, pm.height), pm.samples)
-    img = np.array(img)
-
-    return img
-
-
-def extract_native_text(page: fitz.Page, dpi: int) -> list[dict]:
-    """Extracts text content and bounding boxes from a PDF page using native PDF text.
-
-    This function extracts text directly from the PDF's internal structure rather than using OCR.
-
-    Args:
-        page: The pymupdf Page object to extract text from.
-        dpi: The resolution to use when scaling bounding boxes.
-
-    Returns:
-        list[dict]: A list of dictionaries, each containing:
-            - 'bbox': The bounding box coordinates [x1, y1, x2, y2]
-            - 'content': The text content of the line
-    """
-    blocks = page.get_text("dict")["blocks"]
-    data = []
-    for block in blocks:
-        if "lines" in block:
-            for line in block["lines"]:
-                content = "".join([span["text"] for span in line["spans"]])
-                if content.strip():
-                    line["bbox"] = tuple([(dpi / 72) * x for x in line["bbox"]])
-                    data.append(
-                        {
-                            "bbox": line["bbox"],
-                            "content": content,
-                        }
-                    )
-    return data
-
-
-def has_images(page: fitz.Page) -> bool:
-    """Checks if a page has images that are large enough to potentially contain text.
-
-    Args:
-        page: The pymupdf Page object to check.
-
-    Returns:
-        bool: True if the page contains images of a significant size, False otherwise.
-    """
-    image_list = page.get_images(full=True)
-
-    for _, img_info in enumerate(image_list):
-        xref = img_info[0]
-        base_image = page.parent.extract_image(xref)
-
-        if base_image:
-            width = base_image["width"]
-            height = base_image["height"]
-            if width > 10 and height > 10:
-                return True
-
-    return False
-
-
-def has_text_annotations(page: fitz.Page) -> bool:
-    """Checks if a page has annotations that could contain text.
-
-    Args:
-        page: The pymupdf Page object to check.
-
-    Returns:
-        bool: True if the page has text-containing annotations, False otherwise.
-    """
-    annots = page.annots()
-
-    if annots:
-        for annot in annots:
-            annot_type = annot.type[1]
-            if annot_type in [fitz.PDF_ANNOT_FREE_TEXT, fitz.PDF_ANNOT_WIDGET]:
-                return True
-
-    return False
-
-
-def page_needs_ocr(page: fitz.Page) -> bool:
-    """Determines if a page needs OCR processing.
-
-    This function checks various conditions to decide if OCR is needed:
-    - If the page has no text
-    - If the page has CID-encoded text (often indicates non-extractable text)
-    - If the page has text annotations
-    - If the page has images that might contain text
-    - If the page has many drawing paths (might be scanned text)
-
-    Args:
-        page: The pymupdf Page object to check.
-
-    Returns:
-        bool: True if the page needs OCR processing, False otherwise.
-    """
-    page_text = page.get_text()
-
-    if page_text.strip() == "":
-        return True
-
-    if "(cid:" in page_text:
-        return True
-
-    if has_text_annotations(page):
-        return True
-
-    if has_images(page):
-        return True
-
-    paths = page.get_drawings()
-    if len(paths) > 10:
-        return True
-
-    return False
+from .utils import extract_native_text, page_needs_ocr, page_to_image
 
 
 class DocumentComponent:
@@ -180,7 +47,8 @@ class DocumentComponent:
         """Gets the child components of this component.
 
         Returns:
-            list[DocumentComponent]: A list of child components, or an empty list if no children exist.
+            list[DocumentComponent]: A list of child components, or an empty list
+                if no children exist.
         """
         if self.child_attr is not None:
             return getattr(self, self.child_attr, [])
@@ -234,8 +102,8 @@ class DocumentComponent:
 
     def clip(
         self,
-        bbox: Optional[tuple[float, float, float, float]] = None,
-        save: Optional[str] = None,
+        bbox: tuple[float, float, float, float] | None = None,
+        save: str | None = None,
     ):
         """Clips an image of this component from the parent page.
 
@@ -266,8 +134,7 @@ class DocumentComponent:
         Yields:
             DocumentComponent: Each child component.
         """
-        for child in self.children:
-            yield child
+        yield from self.children
 
     def __len__(self) -> int:
         """Gets the number of child components.
@@ -349,7 +216,7 @@ class Block(DocumentComponent):
         i: int,
         bbox: tuple[float, float, float, float],
         block_type: str = "text",
-        lines: list[dict] = [],
+        lines: list[dict] | None = None,
     ):
         """Initializes a new Block component.
 
@@ -364,7 +231,12 @@ class Block(DocumentComponent):
         self.i = i
         self.bbox = bbox
         self.block_type = block_type
-        self.lines = [Line(self, i, line["bbox"], line["content"]) for i, line in enumerate(lines)]
+        self.lines = []
+        if lines is not None:
+            self.lines = [
+                Line(self, i, line["bbox"], line["content"])
+                for i, line in enumerate(lines)
+            ]
 
     @property
     def data(self) -> dict:
@@ -399,7 +271,7 @@ class Page(DocumentComponent):
     child_attr = "blocks"
     text_join = "\n\n"
 
-    def __init__(self, doc: "PDFDocument", i: int, blocks: list[dict] = []):
+    def __init__(self, doc: "PDFDocument", i: int, blocks: list[dict] | None = None):
         """Initializes a new Page component.
 
         Args:
@@ -413,7 +285,8 @@ class Page(DocumentComponent):
         self.img = None
         self.extracted_text = None
         self.needs_ocr = None
-        self.set_blocks(blocks)
+        if blocks is not None:
+            self.set_blocks(blocks)
 
     @property
     def fitz(self) -> fitz.Page:
@@ -443,8 +316,8 @@ class Page(DocumentComponent):
 
     def clip(
         self,
-        bbox: Optional[tuple[float, float, float, float]] = None,
-        save: Optional[str] = None,
+        bbox: tuple[float, float, float, float] | None = None,
+        save: str | None = None,
     ) -> Image.Image:
         """Clips an image from this page.
 
@@ -482,8 +355,9 @@ class Page(DocumentComponent):
 class PDFDocument:
     """Represents a PDF document.
 
-    This class handles loading, processing, and extracting text from PDF documents.
-    It manages the document hierarchy (pages, blocks, lines) and handles OCR when needed.
+    This class handles loading, processing, and extracting text from PDF
+        documents. It manages the document hierarchy (pages, blocks, lines)
+        and handles OCR when needed.
 
     Attributes:
         doc: The underlying PyMuPDF document.
@@ -495,12 +369,13 @@ class PDFDocument:
 
     def __init__(
         self,
-        file_or_path: Union[bytes, str, Path],
-        filename: Optional[str] = None,
+        file_or_path: bytes | str | Path,
+        filename: str | None = None,
         dpi: int = 200,
+        use_s3: bool = True,
         remote: bool = False,
-        api_key: Optional[str] = None,
-        endpoint_url: Optional[str] = None,
+        api_key: str | None = None,
+        endpoint_url: str | None = None,
     ):
         """Initializes a new PDFDocument.
 
@@ -508,7 +383,10 @@ class PDFDocument:
             file_or_path: The PDF file content as bytes, or a path to the PDF file.
             filename: Optional name for the PDF file.
             dpi: The resolution to use when rendering pages for OCR. Defaults to 200.
-            remote: Whether to use remote processing via RemoteClient. Defaults to False.
+            use_s3: Whether to upload the PDF to S3 for remote processing.
+                Defaults to True.
+            remote: Whether to use remote processing via RemoteClient.
+                Defaults to False.
             api_key: Optional API key for remote processing.
             endpoint_url: Optional full endpoint URL for remote processing.
         """
@@ -516,107 +394,85 @@ class PDFDocument:
             self.doc = fitz.open("pdf", file_or_path)
             self.pdf_bytes = file_or_path
             self.pdf_path = None
+            self.filename = filename or "document.pdf"
         else:
             self.doc = fitz.open(file_or_path)
-            self.pdf_bytes = None
-            self.pdf_path = file_or_path
-        self.filename = filename or getattr(file_or_path, "name", "document.pdf")
+            self.pdf_bytes = self.doc.tobytes()
+            self.pdf_path = Path(file_or_path)
+            self.filename = filename or self.pdf_path.name
         self.dpi = dpi
         self.remote = remote
         self.pages = [Page(self, i) for i in range(len(self.doc))]
-        self._remote_client = None
-        self._s3_key = None
-        self._api_key = api_key
-        self._endpoint_url = endpoint_url
+        self.remote_client = RemoteClient(api_key=api_key, endpoint_url=endpoint_url)
+        self.use_s3 = use_s3
+        self.s3 = load_s3()
+        self.s3_available = self.s3.status()
+        self.s3_key = (
+            None if not self.s3_available else f"tmp/{uuid.uuid4()}_{self.filename}"
+        )
 
-    @property
-    def remote_client(self) -> RemoteClient:
-        """Gets or creates the remote client.
-
-        Returns:
-            RemoteClient: The remote client instance.
-        """
-        if self._remote_client is None:
-            self._remote_client = RemoteClient(api_key=self._api_key, endpoint_url=self._endpoint_url)
-        return self._remote_client
-
-    def _upload_to_s3(self) -> str:
-        """Uploads the PDF to S3 with a random filename under the 'ocr' folder.
-
-        Returns:
-            str: The S3 key where the file was uploaded.
-
-        Raises:
-            ValueError: If the upload to S3 fails.
-        """
-        random_id = str(uuid.uuid4())
-        s3_key = f"tmp/{random_id}_{self.filename}"
-
-        if self.pdf_bytes is not None:
-            with Path(f"/tmp/{random_id}.pdf").open("wb") as f:
-                f.write(self.pdf_bytes)
-                temp_path = f.name
-        else:
-            temp_path = self.pdf_path
-
-        # Upload to S3
-        success = upload_to_s3(temp_path, s3_key, overwrite=True)
-        if not success:
-            raise ValueError(f"Failed to upload PDF to S3 at key: {s3_key}")
-
-        # Clean up temporary file if we created one
-        if self.pdf_bytes is not None:
-            Path(temp_path).unlink(missing_ok=True)
-
-        self._s3_key = s3_key
-        return s3_key
-
-    def stream(self, batch_size: int = 1, s3: bool = True) -> Generator[Page, None, None]:
+    def stream(self, batch_size: int = 1) -> Generator[Page, None, None]:
         """Processes the document page by page and yields each processed page.
 
-        This is a generator that processes pages in batches and yields each page
-        after it has been processed. If remote=True, uses the RemoteClient for processing.
+        If remote=True, uses the RemoteClient for processing.
 
         Args:
             batch_size: Number of pages to process in each batch. Defaults to 1.
-            s3: Whether to upload the PDF to S3 for remote processing. Defaults to True.
 
         Yields:
             Page: Each processed page.
         """
         if self.remote:
+            s3_key, file = None, None
             try:
-                s3_key, file = None, None
-                if s3 and AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
-                    s3_key = self._upload_to_s3()
+                if self.use_s3 and self.s3_available:
+                    if self.pdf_path is not None:
+                        self.s3.upload(self.pdf_path, self.s3_key)
+                    else:
+                        with tempfile.NamedTemporaryFile() as f:
+                            f.write(self.pdf_bytes)
+                            self.s3.upload(f.name, self.s3_key)
+                    s3_key = self.s3_key
                 else:
-                    file = self.pdf_bytes or Path(self.pdf_path).read_bytes()
+                    file = self.pdf_bytes
 
                 for result in self.remote_client(
-                    file=file, s3_key=s3_key, filename=self.filename, batch_size=batch_size
+                    file=file,
+                    s3_key=s3_key,
+                    filename=self.filename,
+                    batch_size=batch_size,
                 ):
                     if "stream" in result:
                         for stream_item in result["stream"]:
-                            if "output" in stream_item and "page" in stream_item["output"]:
+                            if (
+                                "output" in stream_item
+                                and "page" in stream_item["output"]
+                            ):
                                 page_data = stream_item["output"]["page"]
                                 page_idx = page_data.get("i", 0)
 
                                 if page_idx < len(self.pages):
-                                    self.pages[page_idx].set_blocks(page_data.get("blocks", []))
+                                    self.pages[page_idx].set_blocks(
+                                        page_data.get("blocks", [])
+                                    )
                                     yield self.pages[page_idx]
 
                     status = result.get("status")
                     if status in ["COMPLETED", "FAILED", "CANCELLED"]:
                         break
 
-                    if "stream" in result:
+                    # delete maybe?
+                    if (1 == -1) and "stream" in result:
                         for stream_item in result["stream"]:
-                            if stream_item.get("output", {}).get("status") in ["COMPLETED", "FAILED", "CANCELLED"]:
+                            if stream_item.get("output", {}).get("status") in [
+                                "COMPLETED",
+                                "FAILED",
+                                "CANCELLED",
+                            ]:
                                 break
             finally:
-                if self._s3_key:
-                    delete_from_s3(self._s3_key)
-                    self._s3_key = None
+                if s3_key is not None:
+                    self.s3.delete(self.s3_key)
         else:
             for i in tqdm(range(0, len(self.doc), batch_size), desc="Processing PDF"):
                 batch_pages = []
@@ -625,23 +481,21 @@ class PDFDocument:
                 for j in range(i, min(i + batch_size, len(self.doc))):
                     page = self[j]
                     # Get the image representation of the page
-                    if not page.img:
+                    if page.img is None:
                         page.img = page_to_image(page.fitz, self.dpi)
 
                     # Check if we need to OCR the page
                     page.needs_ocr = page_needs_ocr(page.fitz)
 
                     if page.needs_ocr:
-                        from .ocr import extract_ocr_text
-
                         page.extracted_text = extract_ocr_text(page.img)
                     else:
-                        page.extracted_text = extract_native_text(page.fitz, dpi=self.dpi)
+                        page.extracted_text = extract_native_text(
+                            page.fitz, dpi=self.dpi
+                        )
 
                     batch_pages.append(page)
                     batch_imgs.append(page.img)
-
-                from .layout import boxes_overlap, predict_layout
 
                 layout_data = predict_layout(batch_imgs, batch_size=batch_size)
 
@@ -655,25 +509,27 @@ class PDFDocument:
                             if boxes_overlap(block["bbox"], line["bbox"]):
                                 block_lines.append(li)
                         block["lines"] = [lines[li] for li in block_lines]
-                        lines = [line for li, line in enumerate(lines) if li not in block_lines]
+                        lines = [
+                            line
+                            for li, line in enumerate(lines)
+                            if li not in block_lines
+                        ]
                         blocks.append(block)
                     page.set_blocks(blocks)
                     yield page
 
-    def process(self, batch_size: int = 1, s3: bool = True) -> "PDFDocument":
+    def process(self, batch_size: int = 1) -> "PDFDocument":
         """Processes the entire document at once.
 
-        This method processes all pages in the document and returns the document itself.
-        If remote=True, uses the RemoteClient for processing.
+        This just runs stream in a loop and returns the document when done.
 
         Args:
             batch_size: Number of pages to process in each batch. Defaults to 1.
-            s3: Whether to upload the PDF to S3 for remote processing. Defaults to True.
 
         Returns:
             PDFDocument: The processed document (self).
         """
-        for _ in self.stream(batch_size=batch_size, s3=s3):
+        for _ in self.stream(batch_size=batch_size):
             pass
         return self
 
@@ -689,7 +545,7 @@ class PDFDocument:
             "pages": [page.data for page in self.pages],
         }
 
-    def save(self, path: Union[str, Path]) -> None:
+    def save(self, path: str | Path) -> None:
         """Saves the document data to a JSON file.
 
         Args:
@@ -697,7 +553,7 @@ class PDFDocument:
         """
         Path(path).write_text(json.dumps(self.data))
 
-    def load(self, path_or_data: Union[str, Path, dict]) -> "PDFDocument":
+    def load(self, path_or_data: str | Path | dict) -> "PDFDocument":
         """Loads document data from a JSON file or dictionary.
 
         Args:
@@ -706,7 +562,7 @@ class PDFDocument:
         Returns:
             PDFDocument: The loaded document (self).
         """
-        if isinstance(path_or_data, (str, Path)):
+        if isinstance(path_or_data, str | Path):
             path = Path(path_or_data)
             data = json.loads(path.read_text())
         else:
@@ -740,8 +596,7 @@ class PDFDocument:
         Yields:
             Page: Each page in the document.
         """
-        for page in self.pages:
-            yield page
+        yield from self.pages
 
     def __len__(self) -> int:
         """Gets the number of pages in the document.
@@ -753,13 +608,14 @@ class PDFDocument:
 
 
 def pdf_document(
-    file_or_path: Union[bytes, str, Path],
-    filename: Optional[str] = None,
+    file_or_path: bytes | str | Path,
+    filename: str | None = None,
     dpi: int = 200,
-    load: Optional[Union[str, Path, dict]] = None,
+    use_s3: bool = True,
     remote: bool = False,
-    api_key: Optional[str] = None,
-    endpoint_url: Optional[str] = None,
+    api_key: str | None = None,
+    endpoint_url: str | None = None,
+    load: str | Path | dict | None = None,
 ) -> PDFDocument:
     """Processes a PDF file for text extraction.
 
@@ -770,16 +626,25 @@ def pdf_document(
         file_or_path: The PDF file content as bytes, or a path to the PDF file.
         filename: Optional name for the PDF file.
         dpi: The resolution to use when rendering pages for OCR. Defaults to 200.
-        load: Optional path to a JSON file or dictionary with existing document data to load.
+        use_s3: Whether to upload the PDF to S3 for remote processing. Defaults
+            to True.
         remote: Whether to use remote processing via RemoteClient. Defaults to False.
         api_key: Optional API key for remote processing.
         endpoint_url: Optional full endpoint URL for remote processing.
+        load: Optional path to a JSON file or dictionary with existing document
+            data to load.
 
     Returns:
         PDFDocument: The created (and possibly processed) document.
     """
     doc = PDFDocument(
-        file_or_path, filename=filename, dpi=dpi, remote=remote, api_key=api_key, endpoint_url=endpoint_url
+        file_or_path,
+        filename=filename,
+        dpi=dpi,
+        use_s3=use_s3,
+        remote=remote,
+        api_key=api_key,
+        endpoint_url=endpoint_url,
     )
 
     if load is not None:

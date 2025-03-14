@@ -1,7 +1,0 @@
-{
-  "input": {
-    "s3_key": "ocr/test.pdf",
-    "filename": "test.pdf",
-    "batch_size": 1
-  }
-}

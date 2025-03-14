@@ -8,42 +8,47 @@ version = "0.1.0"
 authors = [
     { name = "Nathan Dahlberg" },
 ]
-description = "Docket Analyzer OCR Container"
+description = "Docket Analyzer OCR Utility"
 readme = "README.md"
-requires-python = ">=3.10,<3.11"
+requires-python = ">=3.10"
 dependencies = [
-    "boto3",
-    "click",
     "dill",
     "doclayout_yolo",
+    "docketanalyzer-core>=0.1.0",
     "fastapi",
     "huggingface-hub",
-    "paddlepaddle",
-    "paddleocr",
+    "numpy<2",
     "pymupdf",
-    "pytest",
-    "pytest-cov",
-    "python-dotenv",
-    "ruff",
     "runpod",
+    "uv",
     "uvicorn",
 ]
 
 [project.optional-dependencies]
-gpu = [
-    "paddlepaddle-gpu==2.6.2",
+dev = [
+    "docketanalyzer-core[dev]>=0.1.3",
 ]
 
 [tool.ruff]
-lint.select = ["E", "F", "I"]
-line-length = 120
+lint.select = ["E", "F", "I", "B", "UP", "N", "SIM", "PD", "NPY", "PTH", "RUF", "D"]
+lint.ignore = ["D100", "D104"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["docketanalyzer_ocr"]
+known-first-party = ["docketanalyzer_core", "docketanalyzer_ocr"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["I001", "I002"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.pytest.ini_options]
-# Filter out warnings that aren't relevant to our code
+log_cli = true
+log_cli_level = "INFO"
+addopts = "-ra -q --cov=docketanalyzer_ocr"
+testpaths = ["tests"]
+pythonpath = "."
 filterwarnings = [
     "ignore::DeprecationWarning:importlib._bootstrap",
     "ignore::DeprecationWarning:thop.profile",
