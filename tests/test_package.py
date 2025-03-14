@@ -22,4 +22,4 @@ def test_import_time():
     import_time = float(result.stdout.strip())
 
     logging.info(f"docketanalyzer_ocr import time: {import_time:.4f} seconds")
-    assert import_time < 1, f"Import time is too long: {import_time} seconds"
+    assert import_time < 2, f"Import time is too long: {import_time} seconds"

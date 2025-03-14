@@ -1,6 +1,12 @@
+from docketanalyzer_core import download_file
+
 from .utils import BASE_DIR
 
 LAYOUT_MODEL = None
+LAYOUR_MODEL_PATH = (
+    BASE_DIR / "data" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt"
+)
+LAYOUR_MODEL_URL = "https://github.com/docketanalyzer/ocr/raw/refs/heads/main/docketanalyzer_ocr/data/doclayout_yolo_docstructbench_imgsz1280_2501.pt"
 
 LAYOUT_CHOICES = {
     0: "title",
@@ -141,10 +147,13 @@ def load_model() -> tuple["YOLOv10", str]:  # noqa: F821
     device = "cpu" if not torch.cuda.is_available() else "cuda"
 
     if LAYOUT_MODEL is None:
-        LAYOUT_MODEL = YOLOv10(
-            BASE_DIR / "data" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt",
-            verbose=False,
-        )
+        if not LAYOUR_MODEL_PATH.exists():
+            download_file(
+                LAYOUR_MODEL_URL,
+                LAYOUR_MODEL_PATH,
+                description="Downloading layout model...",
+            )
+        LAYOUT_MODEL = YOLOv10(LAYOUR_MODEL_PATH, verbose=False)
         LAYOUT_MODEL.to(device)
 
     return LAYOUT_MODEL, device

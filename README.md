@@ -66,10 +66,9 @@ doc = pdf_document(path, load='doc.json')
 
 You can also serve this tool with Docker.
 
-```
-*** add prebuilt container here
-docker build -t docketanalyzer-ocr .
-docker run --gpus all -p 8000:8000 docketanalyzer-ocr
+```bash
+docker pull nadahlberg/docketanalyzer-ocr:latest
+docker run --gpus all -p 8000:8000 nadahlberg/docketanalyzer-ocr:latest
 ```
 
 And then use process the document in remote mode:
@@ -108,8 +107,8 @@ For serverless usage you can deploy this to RunPod. To get set up:
 
 1. Create a serverless worker on RunPod using the docker container.
 
-```
-*** add prebuilt container here
+```bash
+nadahlberg/docketanalyzer-ocr:latest
 ```
 
 2. Add the following custom run command.

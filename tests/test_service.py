@@ -50,7 +50,7 @@ def service_process():
 
 def test_service_post(monkeypatch, sample_pdf_path, sample_pdf_json, service_process):
     """Test service with post, explicitly overriding endpoint."""
-    time.sleep(5) # Let service start
+    time.sleep(5)  # Let service start
     # Do this to confirm override
     key_check = bool(env.RUNPOD_API_KEY)
     assert key_check, "RUNPOD_API_KEY is not set"
@@ -84,7 +84,7 @@ def test_service_post(monkeypatch, sample_pdf_path, sample_pdf_json, service_pro
 
 def test_service_s3(monkeypatch, sample_pdf_path, sample_pdf_json, service_process):
     """Test service with s3, with implicit local endpoint."""
-    time.sleep(5) # Let service start
+    time.sleep(5)  # Let service start
     monkeypatch.setenv("RUNPOD_OCR_ENDPOINT_ID", "")
     key_check = bool(env.RUNPOD_OCR_ENDPOINT_ID)
     assert not key_check, "RUNPOD_OCR_ENDPOINT_ID is not disabled"
