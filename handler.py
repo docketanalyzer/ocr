@@ -44,7 +44,8 @@ def handler(event: dict) -> Generator[dict, None, None]:
             )
         elif inputs.get("file"):
             pdf_data, filename = load_pdf(
-                file=inputs.pop("file"), filename=filename,
+                file=inputs.pop("file"),
+                filename=filename,
             )
         else:
             raise ValueError("Neither 's3_key' nor 'file' provided in input")
