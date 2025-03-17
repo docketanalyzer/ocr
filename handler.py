@@ -35,7 +35,7 @@ def handler(event: dict) -> Generator[dict, None, None]:
     inputs = event.pop("input")
     filename = inputs.get("filename")
     batch_size = inputs.get("batch_size", 1)
-    force_ocr = inputs.get("force_ocr", False)
+    force_ocr = inputs.get("force_ocr", True)
 
     try:
         if inputs.get("s3_key"):

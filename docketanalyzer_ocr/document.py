@@ -372,7 +372,7 @@ class PDFDocument:
         file_or_path: bytes | str | Path,
         filename: str | None = None,
         dpi: int = 200,
-        force_ocr: bool = False,
+        force_ocr: bool = True,
         use_s3: bool = True,
         remote: bool = False,
         api_key: str | None = None,
@@ -384,7 +384,7 @@ class PDFDocument:
             file_or_path: The PDF file content as bytes, or a path to the PDF file.
             filename: Optional name for the PDF file.
             dpi: The resolution to use when rendering pages for OCR. Defaults to 200.
-            force_ocr: Whether to force OCR on all pages. Defaults to False.
+            force_ocr: Whether to force OCR on all pages. Defaults to True.
             use_s3: Whether to upload the PDF to S3 for remote processing.
                 Defaults to True.
             remote: Whether to use remote processing via RemoteClient.
