@@ -35,6 +35,7 @@ def handler(event: dict) -> Generator[dict, None, None]:
     inputs = event.pop("input")
     filename = inputs.get("filename")
     batch_size = inputs.get("batch_size", 1)
+    force_ocr = inputs.get("force_ocr", False)
 
     try:
         if inputs.get("s3_key"):
@@ -42,11 +43,13 @@ def handler(event: dict) -> Generator[dict, None, None]:
                 s3_key=inputs.pop("s3_key"), filename=filename
             )
         elif inputs.get("file"):
-            pdf_data, filename = load_pdf(file=inputs.pop("file"), filename=filename)
+            pdf_data, filename = load_pdf(
+                file=inputs.pop("file"), filename=filename,
+            )
         else:
             raise ValueError("Neither 's3_key' nor 'file' provided in input")
 
-        doc = pdf_document(pdf_data, filename=filename)
+        doc = pdf_document(pdf_data, filename=filename, force_ocr=force_ocr)
         for i, page in enumerate(doc.stream(batch_size=batch_size)):
             duration = (datetime.now() - start).total_seconds()
             yield {

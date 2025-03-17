@@ -372,6 +372,7 @@ class PDFDocument:
         file_or_path: bytes | str | Path,
         filename: str | None = None,
         dpi: int = 200,
+        force_ocr: bool = False,
         use_s3: bool = True,
         remote: bool = False,
         api_key: str | None = None,
@@ -383,6 +384,7 @@ class PDFDocument:
             file_or_path: The PDF file content as bytes, or a path to the PDF file.
             filename: Optional name for the PDF file.
             dpi: The resolution to use when rendering pages for OCR. Defaults to 200.
+            force_ocr: Whether to force OCR on all pages. Defaults to False.
             use_s3: Whether to upload the PDF to S3 for remote processing.
                 Defaults to True.
             remote: Whether to use remote processing via RemoteClient.
@@ -401,6 +403,7 @@ class PDFDocument:
             self.pdf_path = Path(file_or_path)
             self.filename = filename or self.pdf_path.name
         self.dpi = dpi
+        self.force_ocr = force_ocr
         self.remote = remote
         self.pages = [Page(self, i) for i in range(len(self.doc))]
         self.remote_client = RemoteClient(api_key=api_key, endpoint_url=endpoint_url)
@@ -441,6 +444,7 @@ class PDFDocument:
                     s3_key=s3_key,
                     filename=self.filename,
                     batch_size=batch_size,
+                    force_ocr=self.force_ocr,
                 ):
                     if "stream" in result:
                         for stream_item in result["stream"]:
@@ -460,16 +464,6 @@ class PDFDocument:
                     status = result.get("status")
                     if status in ["COMPLETED", "FAILED", "CANCELLED"]:
                         break
-
-                    # delete maybe?
-                    if (1 == -1) and "stream" in result:
-                        for stream_item in result["stream"]:
-                            if stream_item.get("output", {}).get("status") in [
-                                "COMPLETED",
-                                "FAILED",
-                                "CANCELLED",
-                            ]:
-                                break
             finally:
                 if s3_key is not None:
                     self.s3.delete(self.s3_key)
@@ -485,9 +479,10 @@ class PDFDocument:
                         page.img = page_to_image(page.fitz, self.dpi)
 
                     # Check if we need to OCR the page
-                    page.needs_ocr = page_needs_ocr(page.fitz)
+                    if not self.force_ocr:
+                        page.needs_ocr = page_needs_ocr(page.fitz)
 
-                    if page.needs_ocr:
+                    if self.force_ocr or page.needs_ocr:
                         page.extracted_text = extract_ocr_text(page.img)
                     else:
                         page.extracted_text = extract_native_text(
@@ -551,7 +546,7 @@ class PDFDocument:
         Args:
             path: The path to save the JSON file to.
         """
-        Path(path).write_text(json.dumps(self.data))
+        Path(path).write_text(json.dumps(self.data, indent=2))
 
     def load(self, path_or_data: str | Path | dict) -> "PDFDocument":
         """Loads document data from a JSON file or dictionary.
