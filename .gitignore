@@ -1,5 +1,4 @@
-temp
-docketanalyzer_ocr/data/venv
+temp.py
 
 ### Flask ###
 instance/*

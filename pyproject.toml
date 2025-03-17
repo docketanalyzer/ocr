@@ -14,7 +14,7 @@ requires-python = ">=3.10"
 dependencies = [
     "dill",
     "doclayout_yolo",
-    "docketanalyzer-core>=0.1.0",
+    "docketanalyzer-core>=0.1.5",
     "fastapi",
     "huggingface-hub",
     "numpy<2",
@@ -26,12 +26,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "docketanalyzer-core[dev]>=0.1.4",
+    "docketanalyzer-core[dev]>=0.1.5",
 ]
 
 [tool.ruff]
 lint.select = ["E", "F", "I", "B", "UP", "N", "SIM", "PD", "NPY", "PTH", "RUF", "D"]
-lint.ignore = ["D100", "D104"]
+lint.ignore = ["D100", "D104", "N801"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["docketanalyzer_core", "docketanalyzer_ocr"]
