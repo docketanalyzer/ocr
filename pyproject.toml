@@ -22,6 +22,7 @@ dependencies = [
     "numpy<2",
     "pymupdf",
     "runpod",
+    "surya-ocr",
     "uv",
     "uvicorn",
 ]

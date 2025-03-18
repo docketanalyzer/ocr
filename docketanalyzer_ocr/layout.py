@@ -8,6 +8,7 @@ LAYOUR_MODEL_PATH = (
 )
 LAYOUR_MODEL_URL = "https://github.com/docketanalyzer/ocr/raw/refs/heads/main/docketanalyzer_ocr/data/doclayout_yolo_docstructbench_imgsz1280_2501.pt"
 
+
 LAYOUT_CHOICES = {
     0: "title",
     1: "text",

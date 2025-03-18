@@ -2,8 +2,6 @@ import tempfile
 from pathlib import Path
 
 import fitz
-import numpy as np
-from PIL import Image
 
 from docketanalyzer_core import load_s3
 
@@ -49,32 +47,6 @@ def load_pdf(
         temp_path = Path(temp_file.name)
         load_s3().download(s3_key, str(temp_path))
         return temp_path.read_bytes(), filename
-
-
-def page_to_image(page: fitz.Page, dpi: int = 200) -> np.ndarray:
-    """Converts a PDF page to a numpy image array.
-
-    This function renders a PDF page at the specified DPI and converts it to a numpy
-        array. If the resulting image would be too large, it falls back to a
-        lower resolution.
-
-    Args:
-        page: The pymupdf Page object to convert.
-        dpi: The dots per inch resolution to render at. Defaults to 200.
-
-    Returns:
-        np.ndarray: The page as a numpy array in RGB format.
-    """
-    mat = fitz.Matrix(dpi / 72, dpi / 72)
-    pm = page.get_pixmap(matrix=mat, alpha=False)
-
-    if pm.width > 4500 or pm.height > 4500:
-        pm = page.get_pixmap(matrix=fitz.Matrix(1, 1), alpha=False)
-
-    img = Image.frombytes("RGB", (pm.width, pm.height), pm.samples)
-    img = np.array(img)
-
-    return img
 
 
 def extract_native_text(page: fitz.Page, dpi: int) -> list[dict]:

@@ -5,15 +5,15 @@ from collections.abc import Generator, Iterator
 from pathlib import Path
 
 import fitz
+import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
 from docketanalyzer_core import load_s3
 
 from .layout import boxes_overlap, predict_layout
-from .ocr import extract_ocr_text
+from .ocr import extract_text
 from .remote import RemoteClient
-from .utils import extract_native_text, page_needs_ocr, page_to_image
 
 
 class DocumentComponent:
@@ -282,11 +282,29 @@ class Page(DocumentComponent):
         self._doc = doc
         self.i = i
         self.blocks = []
-        self.img = None
+        self._img = None
         self.extracted_text = None
         self.needs_ocr = None
         if blocks is not None:
             self.set_blocks(blocks)
+
+    def get_img(self, dpi: int | None = None) -> Image.Image:
+        """Gets the image representation of this page."""
+        if dpi is not None:
+            mat = fitz.Matrix(self.doc.dpi / 72, self.doc.dpi / 72)
+            pm = self.fitz.get_pixmap(matrix=mat, alpha=False)
+            if pm.width > 4500 or pm.height > 4500:
+                pm = self.fitz.get_pixmap(alpha=False)
+        else:
+            pm = self.fitz.get_pixmap(alpha=False)
+        return Image.frombytes("RGB", (pm.width, pm.height), pm.samples)
+
+    @property
+    def img(self) -> Image.Image:
+        """Gets the image representation of this page."""
+        if self._img is None:
+            self._img = self.get_img()
+        return self._img
 
     @property
     def fitz(self) -> fitz.Page:
@@ -296,6 +314,12 @@ class Page(DocumentComponent):
             fitz.Page: The PyMuPDF page object.
         """
         return self._doc.doc[self.i]
+
+    def draw(self, bbox: tuple[float, float, float, float], **kwargs) -> None:
+        """Draws a rectangle on the page."""
+        bbox = [x / (self.doc.dpi / 72) for x in bbox]
+        rect = fitz.Rect(*bbox)
+        self.fitz.draw_rect(rect, **kwargs)
 
     def set_blocks(self, blocks: list[dict]) -> None:
         """Sets the blocks for this page.
@@ -372,7 +396,6 @@ class PDFDocument:
         file_or_path: bytes | str | Path,
         filename: str | None = None,
         dpi: int = 200,
-        force_ocr: bool = True,
         use_s3: bool = True,
         remote: bool = False,
         api_key: str | None = None,
@@ -384,7 +407,6 @@ class PDFDocument:
             file_or_path: The PDF file content as bytes, or a path to the PDF file.
             filename: Optional name for the PDF file.
             dpi: The resolution to use when rendering pages for OCR. Defaults to 200.
-            force_ocr: Whether to force OCR on all pages. Defaults to True.
             use_s3: Whether to upload the PDF to S3 for remote processing.
                 Defaults to True.
             remote: Whether to use remote processing via RemoteClient.
@@ -403,7 +425,6 @@ class PDFDocument:
             self.pdf_path = Path(file_or_path)
             self.filename = filename or self.pdf_path.name
         self.dpi = dpi
-        self.force_ocr = force_ocr
         self.remote = remote
         self.pages = [Page(self, i) for i in range(len(self.doc))]
         self.remote_client = RemoteClient(api_key=api_key, endpoint_url=endpoint_url)
@@ -444,7 +465,6 @@ class PDFDocument:
                     s3_key=s3_key,
                     filename=self.filename,
                     batch_size=batch_size,
-                    force_ocr=self.force_ocr,
                 ):
                     if "stream" in result:
                         for stream_item in result["stream"]:
@@ -469,30 +489,18 @@ class PDFDocument:
                     self.s3.delete(self.s3_key)
         else:
             for i in tqdm(range(0, len(self.doc), batch_size), desc="Processing PDF"):
-                batch_pages = []
-                batch_imgs = []
+                batch_pages = [
+                    self[j] for j in range(i, min(i + batch_size, len(self.doc)))
+                ]
 
-                for j in range(i, min(i + batch_size, len(self.doc))):
-                    page = self[j]
-                    # Get the image representation of the page
-                    if page.img is None:
-                        page.img = page_to_image(page.fitz, self.dpi)
+                ocr_data = extract_text([page.img for page in batch_pages])
+                for i in range(len(batch_pages)):
+                    batch_pages[i].extracted_text = ocr_data[i]
 
-                    # Check if we need to OCR the page
-                    if not self.force_ocr:
-                        page.needs_ocr = page_needs_ocr(page.fitz)
-
-                    if self.force_ocr or page.needs_ocr:
-                        page.extracted_text = extract_ocr_text(page.img)
-                    else:
-                        page.extracted_text = extract_native_text(
-                            page.fitz, dpi=self.dpi
-                        )
-
-                    batch_pages.append(page)
-                    batch_imgs.append(page.img)
-
-                layout_data = predict_layout(batch_imgs, batch_size=batch_size)
+                layout_data = predict_layout(
+                    [np.array(page.get_img(dpi=self.dpi)) for page in batch_pages],
+                    batch_size=batch_size,
+                )
 
                 for j, page_layout in enumerate(layout_data):
                     page = batch_pages[j]
