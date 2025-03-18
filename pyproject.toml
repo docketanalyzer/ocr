@@ -16,7 +16,7 @@ requires-python = ">=3.10"
 dependencies = [
     "dill",
     "doclayout_yolo",
-    "docketanalyzer-core>=0.1.9",
+    "docketanalyzer-core>=0.1.10",
     "fastapi",
     "huggingface-hub",
     "pymupdf",
@@ -28,7 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "docketanalyzer-core[dev]>=0.1.9",
+    "docketanalyzer-core[dev]>=0.1.10",
 ]
 
 [tool.hatch.build.targets.wheel]

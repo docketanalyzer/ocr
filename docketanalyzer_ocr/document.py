@@ -283,7 +283,6 @@ class Page(DocumentComponent):
         self._doc = doc
         self.i = i
         self.blocks = []
-        self._img = None
         self.extracted_text = None
         self.needs_ocr = None
         if blocks is not None:
@@ -303,9 +302,7 @@ class Page(DocumentComponent):
     @property
     def img(self) -> Image.Image:
         """Gets the image representation of this page."""
-        if self._img is None:
-            self._img = self.get_img()
-        return self._img
+        return self.get_img()
 
     @property
     def fitz(self) -> fitz.Page:
