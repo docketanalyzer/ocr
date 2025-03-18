@@ -1,10 +1,14 @@
-from docketanalyzer_core import download_file
+from pathlib import Path
 
-from .utils import BASE_DIR
+from docketanalyzer_core import download_file
 
 LAYOUT_MODEL = None
 LAYOUR_MODEL_PATH = (
-    BASE_DIR / "data" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt"
+    Path.home()
+    / ".cache"
+    / "docketanalyzer"
+    / "ocr"
+    / "doclayout_yolo_docstructbench_imgsz1280_2501.pt"
 )
 LAYOUR_MODEL_URL = "https://github.com/docketanalyzer/ocr/raw/refs/heads/main/models/doclayout_yolo_docstructbench_imgsz1280_2501.pt"
 

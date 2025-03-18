@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docketanalyzer-ocr"
-version = "0.1.5"
+version = "0.1.7"
 authors = [
     { name = "Nathan Dahlberg" },
 ]
@@ -19,7 +19,6 @@ dependencies = [
     "docketanalyzer-core>=0.1.9",
     "fastapi",
     "huggingface-hub",
-    "numpy<2",
     "pymupdf",
     "runpod",
     "surya-ocr",

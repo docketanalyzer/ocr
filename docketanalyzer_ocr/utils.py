@@ -3,8 +3,6 @@ from pathlib import Path
 
 from docketanalyzer_core import load_s3
 
-BASE_DIR = Path(__file__).resolve().parent
-
 
 def load_pdf(
     file: bytes | None = None,
