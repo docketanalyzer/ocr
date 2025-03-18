@@ -6,7 +6,7 @@ LAYOUT_MODEL = None
 LAYOUR_MODEL_PATH = (
     BASE_DIR / "data" / "doclayout_yolo_docstructbench_imgsz1280_2501.pt"
 )
-LAYOUR_MODEL_URL = "https://github.com/docketanalyzer/ocr/raw/refs/heads/main/docketanalyzer_ocr/data/doclayout_yolo_docstructbench_imgsz1280_2501.pt"
+LAYOUR_MODEL_URL = "https://github.com/docketanalyzer/ocr/raw/refs/heads/main/models/doclayout_yolo_docstructbench_imgsz1280_2501.pt"
 
 
 LAYOUT_CHOICES = {
@@ -171,6 +171,7 @@ def load_model() -> tuple["YOLOv10", str]:  # noqa: F821
 
     if LAYOUT_MODEL is None:
         if not LAYOUR_MODEL_PATH.exists():
+            LAYOUR_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
             download_file(
                 LAYOUR_MODEL_URL,
                 LAYOUR_MODEL_PATH,
