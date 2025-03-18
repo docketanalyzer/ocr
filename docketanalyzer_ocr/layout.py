@@ -62,7 +62,7 @@ def merge_overlapping_blocks(blocks: list[dict]) -> list[dict]:
                 other = unprocessed[i]
                 other_bbox = other["bbox"]
 
-                if boxes_overlap(current_bbox, other_bbox):
+                if box_overlap_pct(current_bbox, other_bbox) > 0.5:
                     current_priority = type_priority[current["type"]]
                     other_priority = type_priority[other["type"]]
 
@@ -83,27 +83,49 @@ def merge_overlapping_blocks(blocks: list[dict]) -> list[dict]:
     return result
 
 
-def boxes_overlap(
+def box_overlap_pct(
     box1: tuple[float, float, float, float], box2: tuple[float, float, float, float]
-) -> bool:
-    """Checks if two bounding boxes overlap.
+) -> float:
+    """Calculates the percentage of overlap between two bounding boxes.
+
+    The overlap percentage is calculated as the area of intersection divided by
+    the smaller of the two box areas, resulting in a value between 0.0 and 1.0.
 
     Args:
         box1: Tuple of (xmin, ymin, xmax, ymax) for the first box.
         box2: Tuple of (xmin, ymin, xmax, ymax) for the second box.
 
     Returns:
-        bool: True if the boxes overlap, False otherwise.
+        float: The overlap percentage (0.0 to 1.0) where:
+            - 0.0 means no overlap
+            - 1.0 means one box is completely contained within the other
     """
     x1_min, y1_min, x1_max, y1_max = box1
     x2_min, y2_min, x2_max, y2_max = box2
 
-    return not (
-        x1_max < x2_min
-        or x2_max < x1_min  # No horizontal overlap
-        or y1_max < y2_min
-        or y2_max < y1_min  # No vertical overlap
+    # Calculate the area of each box
+    area1 = (x1_max - x1_min) * (y1_max - y1_min)
+    area2 = (x2_max - x2_min) * (y2_max - y2_min)
+
+    # Calculate intersection coordinates
+    x_overlap_min = max(x1_min, x2_min)
+    x_overlap_max = min(x1_max, x2_max)
+    y_overlap_min = max(y1_min, y2_min)
+    y_overlap_max = min(y1_max, y2_max)
+
+    # Check if there is an overlap
+    if x_overlap_max <= x_overlap_min or y_overlap_max <= y_overlap_min:
+        return 0.0
+
+    # Calculate the area of the intersection
+    intersection_area = (x_overlap_max - x_overlap_min) * (
+        y_overlap_max - y_overlap_min
     )
+
+    # Calculate the overlap percentage relative to the smaller box
+    smaller_area = min(area1, area2)
+
+    return intersection_area / smaller_area
 
 
 def merge_boxes(

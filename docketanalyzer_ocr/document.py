@@ -6,12 +6,13 @@ from pathlib import Path
 
 import fitz
 import numpy as np
+import regex as re
 from PIL import Image
 from tqdm import tqdm
 
 from docketanalyzer_core import load_s3
 
-from .layout import boxes_overlap, predict_layout
+from .layout import box_overlap_pct, merge_boxes, predict_layout
 from .ocr import extract_text
 from .remote import RemoteClient
 
@@ -317,7 +318,7 @@ class Page(DocumentComponent):
 
     def draw(self, bbox: tuple[float, float, float, float], **kwargs) -> None:
         """Draws a rectangle on the page."""
-        bbox = [x / (self.doc.dpi / 72) for x in bbox]
+        bbox = [x for x in bbox]
         rect = fitz.Rect(*bbox)
         self.fitz.draw_rect(rect, **kwargs)
 
@@ -508,11 +509,19 @@ class PDFDocument:
                     lines = page.extracted_text
                     blocks = []
                     for block in page_layout:
+                        block["bbox"] = [x * (72 / self.dpi) for x in block["bbox"]]
                         block_lines = []
                         for li, line in enumerate(lines):
-                            if boxes_overlap(block["bbox"], line["bbox"]):
+                            if box_overlap_pct(block["bbox"], line["bbox"]) > 0.5:
                                 block_lines.append(li)
-                        block["lines"] = [lines[li] for li in block_lines]
+
+                        block["lines"] = []
+                        for li in block_lines:
+                            block["lines"].append(lines[li])
+                            block["bbox"] = merge_boxes(
+                                lines[li]["bbox"], block["bbox"]
+                            )
+
                         lines = [
                             line
                             for li, line in enumerate(lines)
@@ -544,6 +553,25 @@ class PDFDocument:
         """
         for _ in self.stream(batch_size=batch_size):
             pass
+        return self
+
+    def postprocess_court_doc(self) -> "PDFDocument":
+        """Post-processes the document to ignore certain blocks.
+
+        This method uses a few heuristics to identify and certain blocks to ignore
+        """
+        heading_pattern = r"^.{0,50}ase \d+[-:]\d+[-\w]+.{1,200}\s+Page \d+ of \d+"
+        for page in self:
+            for block in page:
+                if (
+                    re.match(heading_pattern, block.text, flags=re.IGNORECASE)
+                    or block.text.strip().isdigit()
+                    or (
+                        block.block_type == "abandon"
+                        and not any(len(line.text) > 4 for line in block)
+                    )
+                ):
+                    block.block_type = "ignore"
         return self
 
     @property

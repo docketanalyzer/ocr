@@ -7,12 +7,12 @@
         {
           "i": 0,
           "bbox": [
-            237.0,
-            121.0,
-            374.0,
-            132.0
+            194.4,
+            119.16,
+            417.96,
+            152.28
           ],
-          "type": "text",
+          "type": "title",
           "lines": [
             {
               "i": 0,
@@ -23,21 +23,9 @@
                 132.0
               ],
               "content": "NOTICE: SLIP OPINION"
-            }
-          ]
-        },
-        {
-          "i": 1,
-          "bbox": [
-            195.0,
-            139.0,
-            416.0,
-            150.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 1,
               "bbox": [
                 195.0,
                 139.0,
@@ -49,12 +37,12 @@
           ]
         },
         {
-          "i": 2,
+          "i": 1,
           "bbox": [
-            71.0,
-            189.0,
-            522.0,
-            200.0
+            70.0,
+            186.48,
+            523.8,
+            219.23999999999998
           ],
           "type": "text",
           "lines": [
@@ -67,21 +55,9 @@
                 200.0
               ],
               "content": "The opinion that begins on the next page is a slip opinion. Slip opinions are the"
-            }
-          ]
-        },
-        {
-          "i": 3,
-          "bbox": [
-            70.0,
-            206.0,
-            374.0,
-            217.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 1,
               "bbox": [
                 70.0,
                 206.0,
@@ -93,12 +69,12 @@
           ]
         },
         {
-          "i": 4,
+          "i": 2,
           "bbox": [
             70.0,
-            231.0,
-            519.0,
-            242.0
+            228.6,
+            539.0,
+            380.88
           ],
           "type": "text",
           "lines": [
@@ -111,21 +87,9 @@
                 242.0
               ],
               "content": "A slip opinion is not necessarily the court's final written decision. Slip opinions"
-            }
-          ]
-        },
-        {
-          "i": 5,
-          "bbox": [
-            70.0,
-            248.0,
-            524.0,
-            260.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 1,
               "bbox": [
                 70.0,
                 248.0,
@@ -133,21 +97,9 @@
                 260.0
               ],
               "content": "can be changed by subsequent court orders. For example, a court may issue an"
-            }
-          ]
-        },
-        {
-          "i": 6,
-          "bbox": [
-            70.0,
-            265.0,
-            532.0,
-            276.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 2,
               "bbox": [
                 70.0,
                 265.0,
@@ -155,21 +107,9 @@
                 276.0
               ],
               "content": "order making substantive changes to a slip opinion or publishing for precedential"
-            }
-          ]
-        },
-        {
-          "i": 7,
-          "bbox": [
-            70.0,
-            282.0,
-            530.0,
-            293.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 3,
               "bbox": [
                 70.0,
                 282.0,
@@ -177,21 +117,9 @@
                 293.0
               ],
               "content": "purposes a previously \"unpublished\" opinion. Additionally, nonsubstantive edits"
-            }
-          ]
-        },
-        {
-          "i": 8,
-          "bbox": [
-            70.0,
-            299.0,
-            506.0,
-            311.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 4,
               "bbox": [
                 70.0,
                 299.0,
@@ -199,21 +127,9 @@
                 311.0
               ],
               "content": "(for style, grammar, citation, format, punctuation, etc.) are made before the"
-            }
-          ]
-        },
-        {
-          "i": 9,
-          "bbox": [
-            70.0,
-            317.0,
-            539.0,
-            328.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 5,
               "bbox": [
                 70.0,
                 317.0,
@@ -221,21 +137,9 @@
                 328.0
               ],
               "content": "opinions that have precedential value are published in the official reports of court"
-            }
-          ]
-        },
-        {
-          "i": 10,
-          "bbox": [
-            70.0,
-            334.0,
-            537.0,
-            345.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 6,
               "bbox": [
                 70.0,
                 334.0,
@@ -243,21 +147,9 @@
                 345.0
               ],
               "content": "decisions: the Washington Reports 2d and the Washington Appellate Reports. An"
-            }
-          ]
-        },
-        {
-          "i": 11,
-          "bbox": [
-            70.0,
-            351.0,
-            520.0,
-            363.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 7,
               "bbox": [
                 70.0,
                 351.0,
@@ -265,21 +157,9 @@
                 363.0
               ],
               "content": "opinion in the official reports replaces the slip opinion as the official opinion of"
-            }
-          ]
-        },
-        {
-          "i": 12,
-          "bbox": [
-            70.0,
-            368.0,
-            128.0,
-            378.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 8,
               "bbox": [
                 70.0,
                 368.0,
@@ -291,12 +171,12 @@
           ]
         },
         {
-          "i": 13,
+          "i": 3,
           "bbox": [
             70.0,
-            393.0,
-            525.0,
-            404.0
+            390.24,
+            538.56,
+            492.47999999999996
           ],
           "type": "text",
           "lines": [
@@ -309,21 +189,9 @@
                 404.0
               ],
               "content": "The slip opinion that begins on the next page is for a published opinion, and it"
-            }
-          ]
-        },
-        {
-          "i": 14,
-          "bbox": [
-            70.0,
-            410.0,
-            536.0,
-            421.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 1,
               "bbox": [
                 70.0,
                 410.0,
@@ -331,21 +199,9 @@
                 421.0
               ],
               "content": "has since been revised for publication in the printed official reports. The official"
-            }
-          ]
-        },
-        {
-          "i": 15,
-          "bbox": [
-            70.0,
-            427.0,
-            534.0,
-            438.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 2,
               "bbox": [
                 70.0,
                 427.0,
@@ -353,21 +209,9 @@
                 438.0
               ],
               "content": "text of the court's opinion is found in the advance sheets and the bound volumes"
-            }
-          ]
-        },
-        {
-          "i": 16,
-          "bbox": [
-            70.0,
-            444.0,
-            488.0,
-            455.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 3,
               "bbox": [
                 70.0,
                 444.0,
@@ -375,21 +219,9 @@
                 455.0
               ],
               "content": "of the official reports. Also, an electronic version (intended to mirror the"
-            }
-          ]
-        },
-        {
-          "i": 17,
-          "bbox": [
-            70.0,
-            461.0,
-            538.0,
-            472.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 4,
               "bbox": [
                 70.0,
                 461.0,
@@ -397,21 +229,9 @@
                 472.0
               ],
               "content": "language found in the official reports) of the revised opinion can be found, free of"
-            }
-          ]
-        },
-        {
-          "i": 18,
-          "bbox": [
-            70.0,
-            478.0,
-            479.0,
-            489.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 5,
               "bbox": [
                 70.0,
                 478.0,
@@ -423,12 +243,12 @@
           ]
         },
         {
-          "i": 19,
+          "i": 4,
           "bbox": [
             70.0,
-            504.0,
-            526.0,
-            515.0
+            501.47999999999996,
+            528.12,
+            551.52
           ],
           "type": "text",
           "lines": [
@@ -441,21 +261,9 @@
                 515.0
               ],
               "content": "For more information about precedential (published) opinions, nonprecedential"
-            }
-          ]
-        },
-        {
-          "i": 20,
-          "bbox": [
-            199,
-            518,
-            1455,
-            609
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 1,
               "bbox": [
                 70.0,
                 521.0,
@@ -465,7 +273,7 @@
               "content": "(unpublished) opinions, slip opinions, and the official reports, see"
             },
             {
-              "i": 1,
+              "i": 2,
               "bbox": [
                 70.0,
                 538.0,
@@ -484,12 +292,12 @@
         {
           "i": 0,
           "bbox": [
-            17.0,
-            20.0,
-            561.0,
-            33.0
+            15.84,
+            19.08,
+            565.1999999999999,
+            91.08
           ],
-          "type": "text",
+          "type": "abandon",
           "lines": [
             {
               "i": 0,
@@ -500,21 +308,9 @@
                 33.0
               ],
               "content": "For the current opinion, go to https://www.lexisnexis.com/cliqueDwareports/."
-            }
-          ]
-        },
-        {
-          "i": 1,
-          "bbox": [
-            438.0,
-            35.0,
-            495.0,
-            45.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 1,
               "bbox": [
                 438.0,
                 35.0,
@@ -522,21 +318,9 @@
                 45.0
               ],
               "content": "4/10/2023"
-            }
-          ]
-        },
-        {
-          "i": 2,
-          "bbox": [
-            44,
-            53,
-            1570,
-            253
-          ],
-          "type": "abandon",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 2,
               "bbox": [
                 419.0,
                 49.0,
@@ -546,7 +330,7 @@
               "content": "Court of Appeals"
             },
             {
-              "i": 1,
+              "i": 3,
               "bbox": [
                 440.0,
                 63.0,
@@ -556,7 +340,7 @@
               "content": "Division I"
             },
             {
-              "i": 2,
+              "i": 4,
               "bbox": [
                 410.0,
                 77.0,
@@ -564,9 +348,21 @@
                 88.0
               ],
               "content": "State of Washington"
-            },
+            }
+          ]
+        },
+        {
+          "i": 1,
+          "bbox": [
+            123.11999999999999,
+            126.36,
+            487.08,
+            141.48
+          ],
+          "type": "title",
+          "lines": [
             {
-              "i": 3,
+              "i": 0,
               "bbox": [
                 125.0,
                 128.0,
@@ -574,9 +370,21 @@
                 138.0
               ],
               "content": "IN THE COURT OF APPEALS OF THE STATE OF WASHINGTON"
-            },
+            }
+          ]
+        },
+        {
+          "i": 2,
+          "bbox": [
+            93.24,
+            167.4,
+            289.8,
+            196.92
+          ],
+          "type": "text",
+          "lines": [
             {
-              "i": 4,
+              "i": 0,
               "bbox": [
                 94.0,
                 170.0,
@@ -586,7 +394,29 @@
               "content": "CULINARY VENTURES. LTD. d/b/a"
             },
             {
-              "i": 5,
+              "i": 1,
+              "bbox": [
+                94.0,
+                185.0,
+                161.0,
+                195.0
+              ],
+              "content": "BITEMOJO,"
+            }
+          ]
+        },
+        {
+          "i": 3,
+          "bbox": [
+            348.84,
+            181.07999999999998,
+            475.91999999999996,
+            252.72
+          ],
+          "type": "text",
+          "lines": [
+            {
+              "i": 0,
               "bbox": [
                 350.0,
                 184.0,
@@ -596,17 +426,7 @@
               "content": "No. 83486-0-1"
             },
             {
-              "i": 6,
-              "bbox": [
-                94.0,
-                185.0,
-                161.0,
-                195.0
-              ],
-              "content": "BITEMOJO,"
-            },
-            {
-              "i": 7,
+              "i": 1,
               "bbox": [
                 350.0,
                 211.0,
@@ -616,17 +436,7 @@
               "content": "DIVISION ONE"
             },
             {
-              "i": 8,
-              "bbox": [
-                202.0,
-                212.0,
-                257.0,
-                222.0
-              ],
-              "content": "Appellant,"
-            },
-            {
-              "i": 9,
+              "i": 2,
               "bbox": [
                 350.0,
                 239.0,
@@ -634,9 +444,43 @@
                 248.0
               ],
               "content": "PUBLISHED OPINION"
-            },
+            }
+          ]
+        },
+        {
+          "i": 4,
+          "bbox": [
+            201.95999999999998,
+            210.6,
+            257.4,
+            225.0
+          ],
+          "type": "text",
+          "lines": [
             {
-              "i": 10,
+              "i": 0,
+              "bbox": [
+                202.0,
+                212.0,
+                257.0,
+                222.0
+              ],
+              "content": "Appellant,"
+            }
+          ]
+        },
+        {
+          "i": 5,
+          "bbox": [
+            166.0,
+            241.0,
+            177.0,
+            249.0
+          ],
+          "type": "text",
+          "lines": [
+            {
+              "i": 0,
               "bbox": [
                 166.0,
                 241.0,
@@ -648,12 +492,12 @@
           ]
         },
         {
-          "i": 3,
+          "i": 6,
           "bbox": [
-            94.0,
-            266.0,
-            263.0,
-            277.0
+            92.52,
+            263.52,
+            272.15999999999997,
+            308.15999999999997
           ],
           "type": "text",
           "lines": [
@@ -666,21 +510,9 @@
                 277.0
               ],
               "content": "MICROSOFT CORPORATION,"
-            }
-          ]
-        },
-        {
-          "i": 4,
-          "bbox": [
-            202.0,
-            295.0,
-            271.0,
-            304.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 1,
               "bbox": [
                 202.0,
                 295.0,
@@ -692,12 +524,12 @@
           ]
         },
         {
-          "i": 5,
+          "i": 7,
           "bbox": [
-            124.0,
-            336.0,
-            461.0,
-            347.0
+            87.47999999999999,
+            333.71999999999997,
+            523.4399999999999,
+            654.84
           ],
           "type": "text",
           "lines": [
@@ -710,21 +542,9 @@
                 347.0
               ],
               "content": "CHUNG, J. - Culinary Ventures d/b/a Bitemojo, the creator of a"
-            }
-          ]
-        },
-        {
-          "i": 6,
-          "bbox": [
-            342,
-            351,
-            1353,
-            393
-          ],
-          "type": "title",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 1,
               "bbox": [
                 89.0,
                 364.0,
@@ -734,7 +554,7 @@
               "content": "smartphone application for self-guided food tours, entered into a subscription"
             },
             {
-              "i": 1,
+              "i": 2,
               "bbox": [
                 89.0,
                 392.0,
@@ -742,21 +562,9 @@
                 402.0
               ],
               "content": "agreement with Microsoft Ireland for its Azure online cloud-based data storage"
-            }
-          ]
-        },
-        {
-          "i": 7,
-          "bbox": [
-            89.0,
-            420.0,
-            502.0,
-            430.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 3,
               "bbox": [
                 89.0,
                 420.0,
@@ -764,21 +572,9 @@
                 430.0
               ],
               "content": "services. The agreement included a forum selection clause specifying that if it"
-            }
-          ]
-        },
-        {
-          "i": 8,
-          "bbox": [
-            89.0,
-            447.0,
-            520.0,
-            458.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 4,
               "bbox": [
                 89.0,
                 447.0,
@@ -786,21 +582,9 @@
                 458.0
               ],
               "content": "brought an action to enforce the agreement, Bitemojo would bring such an action"
-            }
-          ]
-        },
-        {
-          "i": 9,
-          "bbox": [
-            259,
-            465,
-            805,
-            547
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 5,
               "bbox": [
                 89.0,
                 474.0,
@@ -810,7 +594,7 @@
               "content": "in Ireland. At Bitemojo's request, Azure twice suspended Bitemojo's account, as"
             },
             {
-              "i": 1,
+              "i": 6,
               "bbox": [
                 89.0,
                 502.0,
@@ -820,7 +604,7 @@
               "content": "well as the required payments. Thereafter, Azure deleted Bitemojo's data."
             },
             {
-              "i": 2,
+              "i": 7,
               "bbox": [
                 89.0,
                 530.0,
@@ -828,21 +612,9 @@
                 540.0
               ],
               "content": "Subsequently, Bitemojo sued Microsoft Corporation in King County for"
-            }
-          ]
-        },
-        {
-          "i": 10,
-          "bbox": [
-            89.0,
-            557.0,
-            473.0,
-            568.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 8,
               "bbox": [
                 89.0,
                 557.0,
@@ -850,21 +622,9 @@
                 568.0
               ],
               "content": "promissory estoppel, breach of contract, conversion, and violation of the"
-            }
-          ]
-        },
-        {
-          "i": 11,
-          "bbox": [
-            89.0,
-            585.0,
-            520.0,
-            595.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 9,
               "bbox": [
                 89.0,
                 585.0,
@@ -872,21 +632,9 @@
                 595.0
               ],
               "content": "Washington Consumer Protection Act (CPA), chapter 19.86 RCW. The trial court"
-            }
-          ]
-        },
-        {
-          "i": 12,
-          "bbox": [
-            89.0,
-            612.0,
-            490.0,
-            623.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 10,
               "bbox": [
                 89.0,
                 612.0,
@@ -894,21 +642,9 @@
                 623.0
               ],
               "content": "granted Microsoft Corporation's CR 12(b)(3) motion to dismiss for improper"
-            }
-          ]
-        },
-        {
-          "i": 13,
-          "bbox": [
-            89.0,
-            641.0,
-            392.0,
-            651.0
-          ],
-          "type": "text",
-          "lines": [
+            },
             {
-              "i": 0,
+              "i": 11,
               "bbox": [
                 89.0,
                 641.0,

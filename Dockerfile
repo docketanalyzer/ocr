@@ -15,7 +15,7 @@ RUN python -m pip install --upgrade pip
 
 COPY . .
 
-RUN pip install --no-cache-dir '.[dev]'
+RUN pip install --no-cache-dir '.'
 
 RUN python setup.py
 

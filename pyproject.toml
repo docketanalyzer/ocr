@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docketanalyzer-ocr"
-version = "0.1.2"
+version = "0.1.3"
 authors = [
     { name = "Nathan Dahlberg" },
 ]
@@ -29,7 +29,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "docketanalyzer-core[dev]>=0.1.6",
+    "docketanalyzer-core[dev]>=0.1.7",
 ]
 
 [tool.ruff.lint]
@@ -95,4 +95,8 @@ filterwarnings = [
     "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
     "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
     "ignore:distutils Version classes are deprecated:DeprecationWarning",
+    "ignore:Support for class-based `config` is deprecated:DeprecationWarning",
+    "ignore:open_text is deprecated:DeprecationWarning",
+    "ignore:The `dict` method is deprecated; use `model_dump` instead::",
+    "ignore:Use 'content=<...>' to upload raw bytes/text content:DeprecationWarning",
 ]
