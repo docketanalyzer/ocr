@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docketanalyzer-ocr"
-version = "0.1.3"
+version = "0.1.4"
 authors = [
     { name = "Nathan Dahlberg" },
 ]
@@ -16,7 +16,7 @@ requires-python = ">=3.10"
 dependencies = [
     "dill",
     "doclayout_yolo",
-    "docketanalyzer-core>=0.1.6",
+    "docketanalyzer-core>=0.1.8",
     "fastapi",
     "huggingface-hub",
     "numpy<2",
@@ -29,7 +29,20 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "docketanalyzer-core[dev]>=0.1.7",
+    "docketanalyzer-core[dev]>=0.1.8",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "docketanalyzer_ocr",
+]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "*",
+    "!docketanalyzer_ocr/*",
+    "!pyproject.toml",
+    "!README.md",
 ]
 
 [tool.ruff.lint]
