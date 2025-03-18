@@ -13,15 +13,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from docketanalyzer_ocr import load_pdf, pdf_document
-from docketanalyzer_ocr.ocr import OCR_CLIENT
-
-process = OCR_CLIENT.process
 
 jobs = {}
 
 cleanup_task = None
-
-ocr_semaphore = asyncio.Semaphore(1)
 
 
 async def cleanup_old_jobs():
@@ -51,9 +46,6 @@ async def lifespan(app: FastAPI):
     cleanup_task = asyncio.create_task(cleanup_old_jobs())
 
     yield
-
-    print("Stopping OCR service...", flush=True)
-    OCR_CLIENT.stop()
 
     if cleanup_task:
         cleanup_task.cancel()
@@ -126,9 +118,8 @@ async def process_document(job_id: str, input_data: JobInput):
         else:
             raise ValueError("Neither 's3_key' nor 'file' provided in input")
 
-        async with ocr_semaphore:
-            doc = pdf_document(pdf_data, filename=filename)
-            pages = list(doc.stream(batch_size=input_data.batch_size))
+        doc = pdf_document(pdf_data, filename=filename)
+        pages = list(doc.stream(batch_size=input_data.batch_size))
 
         for i, page in enumerate(pages):
             duration = (datetime.now() - start).total_seconds()

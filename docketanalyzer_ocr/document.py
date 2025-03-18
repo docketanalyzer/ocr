@@ -327,6 +327,7 @@ class Page(DocumentComponent):
         Args:
             blocks: A list of block data to set.
         """
+        blocks = sorted(blocks, key=lambda x: x["bbox"][1])
         self.blocks = [
             Block(
                 self,
@@ -517,7 +518,16 @@ class PDFDocument:
                             for li, line in enumerate(lines)
                             if li not in block_lines
                         ]
-                        blocks.append(block)
+                        if len(block["lines"]) > 0:
+                            blocks.append(block)
+                    for line in lines:
+                        blocks.append(
+                            {
+                                "bbox": line["bbox"],
+                                "type": "text",
+                                "lines": [line],
+                            }
+                        )
                     page.set_blocks(blocks)
                     yield page
 

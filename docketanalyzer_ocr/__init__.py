@@ -1,11 +1,12 @@
 from .document import PDFDocument, pdf_document
 from .layout import predict_layout
-from .utils import load_pdf, page_needs_ocr
+from .ocr import extract_text
+from .utils import load_pdf
 
 __all__ = [
     "PDFDocument",
+    "extract_text",
     "load_pdf",
-    "page_needs_ocr",
     "pdf_document",
     "predict_layout",
 ]

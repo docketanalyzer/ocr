@@ -4,9 +4,6 @@ from datetime import datetime
 import runpod
 
 from docketanalyzer_ocr import load_pdf, pdf_document
-from docketanalyzer_ocr.ocr import OCR_CLIENT
-
-process = OCR_CLIENT.process
 
 
 def handler(event: dict) -> Generator[dict, None, None]:
