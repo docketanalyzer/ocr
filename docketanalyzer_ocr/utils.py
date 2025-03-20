@@ -43,3 +43,75 @@ def load_pdf(
         temp_path = Path(temp_file.name)
         load_s3().download(s3_key, str(temp_path))
         return temp_path.read_bytes(), filename
+
+
+def box_overlap_pct(
+    box1: tuple[float, float, float, float],
+    box2: tuple[float, float, float, float],
+    use_first_as_denominator: bool = False,
+) -> float:
+    """Calculates the percentage of overlap between two bounding boxes.
+
+    The overlap percentage is calculated as the area of intersection divided by
+    the smaller of the two box areas, resulting in a value between 0.0 and 1.0.
+
+    Args:
+        box1: Tuple of (xmin, ymin, xmax, ymax) for the first box.
+        box2: Tuple of (xmin, ymin, xmax, ymax) for the second box.
+        use_first_as_denominator: If True, use the first box's area as denominator.
+                                  If False (default), use the smaller of the two areas.
+
+    Returns:
+        float: The overlap percentage (0.0 to 1.0)
+    """
+    x1_min, y1_min, x1_max, y1_max = box1
+    x2_min, y2_min, x2_max, y2_max = box2
+
+    # Calculate the area of each box
+    area1 = (x1_max - x1_min) * (y1_max - y1_min)
+    area2 = (x2_max - x2_min) * (y2_max - y2_min)
+
+    # Calculate intersection coordinates
+    x_overlap_min = max(x1_min, x2_min)
+    x_overlap_max = min(x1_max, x2_max)
+    y_overlap_min = max(y1_min, y2_min)
+    y_overlap_max = min(y1_max, y2_max)
+
+    # Check if there is an overlap
+    if x_overlap_max <= x_overlap_min or y_overlap_max <= y_overlap_min:
+        return 0.0
+
+    # Calculate the area of the intersection
+    intersection_area = (x_overlap_max - x_overlap_min) * (
+        y_overlap_max - y_overlap_min
+    )
+
+    # Calculate the overlap percentage
+    denominator = area1 if use_first_as_denominator else min(area1, area2)
+    return intersection_area / denominator
+
+
+def merge_boxes(
+    box1: tuple[float, float, float, float], box2: tuple[float, float, float, float]
+) -> tuple[float, float, float, float]:
+    """Merges two bounding boxes into one that encompasses both.
+
+    Args:
+        box1: Tuple of (xmin, ymin, xmax, ymax) for the first box.
+        box2: Tuple of (xmin, ymin, xmax, ymax) for the second box.
+
+    Returns:
+        tuple[float, float, float, float]: A new bounding box that contains both
+            input boxes.
+    """
+    x1_min, y1_min, x1_max, y1_max = box1
+    x2_min, y2_min, x2_max, y2_max = box2
+
+    merged_box = (
+        min(x1_min, x2_min),
+        min(y1_min, y2_min),
+        max(x1_max, x2_max),
+        max(y1_max, y2_max),
+    )
+
+    return merged_box

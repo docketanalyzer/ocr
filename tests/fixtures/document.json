@@ -9,173 +9,173 @@
           "bbox": [
             194.4,
             119.16,
-            417.96,
-            152.28
+            419.5230407714844,
+            152.3300018310547
           ],
           "type": "title",
           "lines": [
             {
               "i": 0,
               "bbox": [
-                237.0,
-                121.0,
-                374.0,
-                132.0
+                237.88999938964844,
+                121.25003051757812,
+                380.4030456542969,
+                135.29002380371094
               ],
-              "content": "NOTICE: SLIP OPINION"
+              "content": "NOTICE:   SLIP OPINION  "
             },
             {
               "i": 1,
               "bbox": [
-                195.0,
-                139.0,
-                416.0,
-                150.0
+                195.74000549316406,
+                138.29000854492188,
+                419.5230407714844,
+                152.3300018310547
               ],
-              "content": "(not the court's final written decision)"
+              "content": "(not the court\u2019s final written decision) "
             }
           ]
         },
         {
           "i": 1,
           "bbox": [
-            70.0,
+            71.64,
             186.48,
-            523.8,
-            219.23999999999998
+            524.9683837890625,
+            219.65000915527344
           ],
           "type": "text",
           "lines": [
             {
               "i": 0,
               "bbox": [
-                71.0,
-                189.0,
-                522.0,
-                200.0
+                72.02400207519531,
+                188.44998168945312,
+                524.9683837890625,
+                202.48997497558594
               ],
-              "content": "The opinion that begins on the next page is a slip opinion. Slip opinions are the"
+              "content": "The opinion that begins on the next page is a slip opinion.  Slip opinions are the "
             },
             {
               "i": 1,
               "bbox": [
-                70.0,
-                206.0,
-                374.0,
-                217.0
+                72.02400207519531,
+                205.61001586914062,
+                383.04302978515625,
+                219.65000915527344
               ],
-              "content": "written opinions that are originally filed by the court."
+              "content": "written opinions that are originally filed by the court.   "
             }
           ]
         },
         {
           "i": 2,
           "bbox": [
-            70.0,
+            70.56,
             228.6,
-            539.0,
-            380.88
+            540.3141479492188,
+            381.44000244140625
           ],
           "type": "text",
           "lines": [
             {
               "i": 0,
               "bbox": [
-                70.0,
-                231.0,
-                519.0,
-                242.0
+                72.02400207519531,
+                230.68997192382812,
+                521.5443115234375,
+                244.72996520996094
               ],
-              "content": "A slip opinion is not necessarily the court's final written decision. Slip opinions"
+              "content": "A slip opinion is not necessarily the court\u2019s final written decision.  Slip opinions "
             },
             {
               "i": 1,
               "bbox": [
-                70.0,
-                248.0,
-                524.0,
-                260.0
+                72.02400207519531,
+                247.73001098632812,
+                527.1419677734375,
+                261.77001953125
               ],
-              "content": "can be changed by subsequent court orders. For example, a court may issue an"
+              "content": "can be changed by subsequent court orders.  For example, a court may issue an "
             },
             {
               "i": 2,
               "bbox": [
-                70.0,
-                265.0,
-                532.0,
-                276.0
+                72.02400207519531,
+                264.8000183105469,
+                535.0205688476562,
+                278.84002685546875
               ],
-              "content": "order making substantive changes to a slip opinion or publishing for precedential"
+              "content": "order making substantive changes to a slip opinion or publishing for precedential "
             },
             {
               "i": 3,
               "bbox": [
-                70.0,
-                282.0,
-                530.0,
-                293.0
+                72.02400207519531,
+                281.9599914550781,
+                533.8424072265625,
+                296.0
               ],
-              "content": "purposes a previously \"unpublished\" opinion. Additionally, nonsubstantive edits"
+              "content": "purposes a previously \u201cunpublished\u201d opinion.  Additionally, nonsubstantive edits "
             },
             {
               "i": 4,
               "bbox": [
-                70.0,
+                72.02400207519531,
                 299.0,
-                506.0,
-                311.0
+                508.57000732421875,
+                313.0400085449219
               ],
-              "content": "(for style, grammar, citation, format, punctuation, etc.) are made before the"
+              "content": "(for style, grammar, citation, format, punctuation, etc.) are made before the "
             },
             {
               "i": 5,
               "bbox": [
-                70.0,
-                317.0,
-                539.0,
-                328.0
+                72.02400207519531,
+                316.1600036621094,
+                540.3141479492188,
+                330.20001220703125
               ],
-              "content": "opinions that have precedential value are published in the official reports of court"
+              "content": "opinions that have precedential value are published in the official reports of court "
             },
             {
               "i": 6,
               "bbox": [
-                70.0,
-                334.0,
-                537.0,
-                345.0
+                72.02400207519531,
+                333.20001220703125,
+                539.5731811523438,
+                347.2400207519531
               ],
-              "content": "decisions: the Washington Reports 2d and the Washington Appellate Reports. An"
+              "content": "decisions: the Washington Reports 2d and the Washington Appellate Reports.  An "
             },
             {
               "i": 7,
               "bbox": [
-                70.0,
-                351.0,
-                520.0,
-                363.0
+                72.02400207519531,
+                350.3600158691406,
+                522.4088134765625,
+                364.4000244140625
               ],
-              "content": "opinion in the official reports replaces the slip opinion as the official opinion of"
+              "content": "opinion in the official reports replaces the slip opinion as the official opinion of "
             },
             {
               "i": 8,
               "bbox": [
-                70.0,
-                368.0,
-                128.0,
-                378.0
+                72.02400207519531,
+                367.3999938964844,
+                131.113037109375,
+                381.44000244140625
               ],
-              "content": "the court."
+              "content": "the court. "
             }
           ]
         },
         {
           "i": 3,
           "bbox": [
-            70.0,
+            70.56,
             390.24,
-            538.56,
+            539.6613159179688,
             492.47999999999996
           ],
           "type": "text",
@@ -183,71 +183,71 @@
             {
               "i": 0,
               "bbox": [
-                70.0,
-                393.0,
-                525.0,
-                404.0
+                72.02400207519531,
+                392.4800109863281,
+                527.214599609375,
+                406.52001953125
               ],
-              "content": "The slip opinion that begins on the next page is for a published opinion, and it"
+              "content": "The slip opinion that begins on the next page is for a published opinion, and it "
             },
             {
               "i": 1,
               "bbox": [
-                70.0,
-                410.0,
-                536.0,
-                421.0
+                72.02400207519531,
+                409.5199890136719,
+                538.0773315429688,
+                423.55999755859375
               ],
-              "content": "has since been revised for publication in the printed official reports. The official"
+              "content": "has since been revised for publication in the printed official reports.  The official "
             },
             {
               "i": 2,
               "bbox": [
-                70.0,
-                427.0,
-                534.0,
-                438.0
+                72.02400207519531,
+                426.70001220703125,
+                536.4071044921875,
+                440.7400207519531
               ],
-              "content": "text of the court's opinion is found in the advance sheets and the bound volumes"
+              "content": "text of the court\u2019s opinion is found in the advance sheets and the bound volumes "
             },
             {
               "i": 3,
               "bbox": [
-                70.0,
-                444.0,
-                488.0,
-                455.0
+                72.02400207519531,
+                443.739990234375,
+                490.1546630859375,
+                457.7799987792969
               ],
-              "content": "of the official reports. Also, an electronic version (intended to mirror the"
+              "content": "of the official reports.  Also, an electronic version (intended to mirror the "
             },
             {
               "i": 4,
               "bbox": [
-                70.0,
-                461.0,
-                538.0,
-                472.0
+                72.02400207519531,
+                460.8999938964844,
+                539.6613159179688,
+                474.94000244140625
               ],
-              "content": "language found in the official reports) of the revised opinion can be found, free of"
+              "content": "language found in the official reports) of the revised opinion can be found, free of "
             },
             {
               "i": 5,
               "bbox": [
-                70.0,
-                478.0,
-                479.0,
-                489.0
+                72.02400207519531,
+                477.94000244140625,
+                489.03302001953125,
+                491.9800109863281
               ],
-              "content": "charge, at this website: https://www.lexisnexis.com/clients/wareports."
+              "content": "charge, at this website:  https://www.lexisnexis.com/clients/wareports.   "
             }
           ]
         },
         {
           "i": 4,
           "bbox": [
-            70.0,
+            71.28,
             501.47999999999996,
-            528.12,
+            528.98388671875,
             551.52
           ],
           "type": "text",
@@ -255,32 +255,32 @@
             {
               "i": 0,
               "bbox": [
-                70.0,
-                504.0,
-                526.0,
-                515.0
+                72.02400207519531,
+                503.0199890136719,
+                528.98388671875,
+                517.0599975585938
               ],
-              "content": "For more information about precedential (published) opinions, nonprecedential"
+              "content": "For more information about precedential (published) opinions, nonprecedential "
             },
             {
               "i": 1,
               "bbox": [
-                70.0,
-                521.0,
-                444.0,
-                532.0
+                72.02400207519531,
+                520.179931640625,
+                446.4365234375,
+                534.219970703125
               ],
-              "content": "(unpublished) opinions, slip opinions, and the official reports, see"
+              "content": "(unpublished) opinions, slip opinions, and the official reports, see "
             },
             {
               "i": 2,
               "bbox": [
-                70.0,
-                538.0,
-                514.0,
-                549.0
+                72.02400207519531,
+                537.219970703125,
+                517.9530639648438,
+                551.260009765625
               ],
-              "content": "https://www.courts.wa.gov/opinions and the information that is linked there."
+              "content": "https://www.courts.wa.gov/opinions and the information that is linked there. "
             }
           ]
         }
@@ -359,7 +359,7 @@
             487.08,
             141.48
           ],
-          "type": "title",
+          "type": "text",
           "lines": [
             {
               "i": 0,

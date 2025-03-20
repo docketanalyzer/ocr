@@ -24,9 +24,9 @@ def sample_pdf_json(fixture_dir):
 
 def compare_docs(doc1, doc2):
     """Compare two processed PDF documents for equality."""
-    for page1, page2 in zip(doc1, doc2, strict=False):
-        for block1, block2 in zip(page1, page2, strict=False):
-            for line1, line2 in zip(block1, block2, strict=False):
+    for page1, page2 in zip(doc1, doc2, strict=True):
+        for block1, block2 in zip(page1, page2, strict=True):
+            for line1, line2 in zip(block1, block2, strict=True):
                 if line1.text != line2.text:
                     return False
             if block1.block_type != block2.block_type:

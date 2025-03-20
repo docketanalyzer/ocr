@@ -12,9 +12,125 @@ from tqdm import tqdm
 
 from docketanalyzer_core import load_s3
 
-from .layout import box_overlap_pct, merge_boxes, predict_layout
-from .ocr import extract_text
+from .layout import predict_layout
+from .ocr import extract_native_text, extract_ocr_text
 from .remote import RemoteClient
+from .utils import box_overlap_pct, merge_boxes
+
+
+def page_needs_ocr(
+    page: "Page",
+    layout: list[dict],
+    min_overlap: float = 0.5,
+) -> bool:
+    """Determines whether a page needs OCR processing based on layout and text overlap.
+
+    This function calculates the percentage of the page covered by layout blocks
+    and compares it to the specified minimum overlap threshold.
+
+    Args:
+        page: The Page object to check.
+        layout: The layout data for the page.
+        min_overlap: The minimum overlap percentage to require for native text.
+
+    Returns:
+        bool: True if the page needs OCR processing, False otherwise.
+    """
+    page.extracted_text = extract_native_text(page.fitz)
+    total_area = 0
+    covered_area = 0
+    for block in layout:
+        x1_min, y1_min, x1_max, y1_max = block["bbox"]
+        block_area = (x1_max - x1_min) * (y1_max - y1_min)
+        block_coverage = 0
+        for line in page.extracted_text:
+            block_coverage += box_overlap_pct(
+                block["bbox"],
+                line["bbox"],
+                use_first_as_denominator=True,
+            )
+        block_coverage = min(block_coverage, 1.0)
+        total_area += block_area
+        covered_area += block_area * block_coverage
+    return covered_area / total_area < min_overlap
+
+
+def consolidate_blocks(page: "Page", layout: list[list[dict]]):
+    """Consolidates layout blocks with line data.
+
+    This function merges layout blocks with extracted line data to create a list
+    of consolidated blocks containing both layout and text information.
+    Any lines not contained within a layout block are added as separate text blocks.
+    """
+    lines = page.extracted_text
+    blocks = []
+    for block in layout:
+        block["lines"] = []
+        drop_lines = []
+        new_bbox = block["bbox"]
+        for li, line in enumerate(lines):
+            if box_overlap_pct(block["bbox"], line["bbox"]) > 0.5:
+                block["lines"].append(line)
+                drop_lines.append(li)
+                new_bbox = merge_boxes(new_bbox, lines[li]["bbox"])
+            block["bbox"] = new_bbox
+        lines = [line for li, line in enumerate(lines) if li not in drop_lines]
+        if len(block["lines"]) > 0:
+            blocks.append(block)
+    for line in lines:
+        blocks.append(
+            {
+                "bbox": line["bbox"],
+                "type": "text",
+                "lines": [line],
+            }
+        )
+    return blocks
+
+
+def process_pages(
+    pages: list["Page"],
+    batch_size: int = 1,
+    verbose=True,
+) -> Generator["Page", None, None]:
+    """Processes a list of pages and yields each processed page.
+
+    Page order is not preserved for streaming efficiency.
+    """
+    needs_ocr = []
+
+    for i in tqdm(list(range(0, len(pages), batch_size)), disable=not verbose):
+        batch = pages[i : i + batch_size]
+
+        layouts = predict_layout(
+            [np.array(page.get_img(dpi=page.doc.dpi)) for page in batch],
+            batch_size=batch_size,
+            dpi=batch[0].doc.dpi,
+        )
+
+        for page, layout in zip(batch, layouts, strict=True):
+            page.layout = layout
+            if page_needs_ocr(page, page.layout):
+                needs_ocr.append(page)
+            else:
+                page.set_blocks(consolidate_blocks(page, page.layout))
+                yield page
+
+        while len(needs_ocr) >= batch_size:
+            ocr_batch = needs_ocr[:batch_size]
+            needs_ocr = needs_ocr[batch_size:]
+            ocr_data = extract_ocr_text([page.img for page in ocr_batch])
+            for i, page in enumerate(ocr_batch):
+                page.extracted_text = ocr_data[i]
+                page.set_blocks(consolidate_blocks(page, page.layout))
+                yield page
+
+    if needs_ocr:
+        ocr_data = extract_ocr_text([page.img for page in needs_ocr])
+        for i, page in enumerate(needs_ocr):
+            page.extracted_text = ocr_data[i]
+            page.set_blocks(consolidate_blocks(page, page.layout))
+            yield page
 
 
 class DocumentComponent:
@@ -284,7 +400,7 @@ class Page(DocumentComponent):
         self.i = i
         self.blocks = []
         self.extracted_text = None
-        self.needs_ocr = None
+        self.layout = None
         if blocks is not None:
             self.set_blocks(blocks)
 
@@ -487,55 +603,7 @@ class PDFDocument:
                 if s3_key is not None:
                     self.s3.delete(self.s3_key)
         else:
-            for i in tqdm(range(0, len(self.doc), batch_size), desc="Processing PDF"):
-                batch_pages = [
-                    self[j] for j in range(i, min(i + batch_size, len(self.doc)))
-                ]
-
-                ocr_data = extract_text([page.img for page in batch_pages])
-                for i in range(len(batch_pages)):
-                    batch_pages[i].extracted_text = ocr_data[i]
-
-                layout_data = predict_layout(
-                    [np.array(page.get_img(dpi=self.dpi)) for page in batch_pages],
-                    batch_size=batch_size,
-                )
-
-                for j, page_layout in enumerate(layout_data):
-                    page = batch_pages[j]
-                    lines = page.extracted_text
-                    blocks = []
-                    for block in page_layout:
-                        block["bbox"] = [x * (72 / self.dpi) for x in block["bbox"]]
-                        block_lines = []
-                        for li, line in enumerate(lines):
-                            if box_overlap_pct(block["bbox"], line["bbox"]) > 0.5:
-                                block_lines.append(li)
-
-                        block["lines"] = []
-                        for li in block_lines:
-                            block["lines"].append(lines[li])
-                            block["bbox"] = merge_boxes(
-                                lines[li]["bbox"], block["bbox"]
-                            )
-
-                        lines = [
-                            line
-                            for li, line in enumerate(lines)
-                            if li not in block_lines
-                        ]
-                        if len(block["lines"]) > 0:
-                            blocks.append(block)
-                    for line in lines:
-                        blocks.append(
-                            {
-                                "bbox": line["bbox"],
-                                "type": "text",
-                                "lines": [line],
-                            }
-                        )
-                    page.set_blocks(blocks)
-                    yield page
+            yield from process_pages(self.pages, batch_size=batch_size)
 
     def process(self, batch_size: int = 1) -> "PDFDocument":
         """Processes the entire document at once.
@@ -689,3 +757,28 @@ def pdf_document(
         doc.load(load)
 
     return doc
+
+
+def bulk_process_pdfs(
+    docs: list[PDFDocument | dict | Path | str], batch_size: int
+) -> list[PDFDocument]:
+    """Processes a list of PDF documents in bulk.
+
+    Args:
+        docs: A list of PDFDocument instances to process (or paths or init args).
+        batch_size: Number of pages to process in each batch. Defaults to 1.
+
+    Returns:
+        list[PDFDocument]: A list of processed PDFDocument instances.
+    """
+    all_docs = []
+    for doc in docs:
+        if isinstance(doc, str | Path):
+            doc = pdf_document(doc)
+        elif isinstance(doc, dict):
+            doc = pdf_document(**doc)
+        all_docs.append(doc)
+    pages = [page for doc in all_docs for page in doc]
+    for _ in process_pages(pages, batch_size=batch_size):
+        pass
+    return all_docs

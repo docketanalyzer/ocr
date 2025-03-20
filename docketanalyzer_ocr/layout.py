@@ -2,6 +2,8 @@ from pathlib import Path
 
 from docketanalyzer_core import download_file
 
+from .utils import box_overlap_pct, merge_boxes
+
 LAYOUT_MODEL = None
 LAYOUR_MODEL_PATH = (
     Path.home()
@@ -14,8 +16,8 @@ LAYOUR_MODEL_URL = "https://github.com/docketanalyzer/ocr/raw/refs/heads/main/mo
 
 
 LAYOUT_CHOICES = {
-    0: "title",
     1: "text",
+    0: "title",
     2: "abandon",
     3: "figure",
     4: "figure_caption",
@@ -87,77 +89,6 @@ def merge_overlapping_blocks(blocks: list[dict]) -> list[dict]:
     return result
 
 
-def box_overlap_pct(
-    box1: tuple[float, float, float, float], box2: tuple[float, float, float, float]
-) -> float:
-    """Calculates the percentage of overlap between two bounding boxes.
-
-    The overlap percentage is calculated as the area of intersection divided by
-    the smaller of the two box areas, resulting in a value between 0.0 and 1.0.
-
-    Args:
-        box1: Tuple of (xmin, ymin, xmax, ymax) for the first box.
-        box2: Tuple of (xmin, ymin, xmax, ymax) for the second box.
-
-    Returns:
-        float: The overlap percentage (0.0 to 1.0) where:
-            - 0.0 means no overlap
-            - 1.0 means one box is completely contained within the other
-    """
-    x1_min, y1_min, x1_max, y1_max = box1
-    x2_min, y2_min, x2_max, y2_max = box2
-
-    # Calculate the area of each box
-    area1 = (x1_max - x1_min) * (y1_max - y1_min)
-    area2 = (x2_max - x2_min) * (y2_max - y2_min)
-
-    # Calculate intersection coordinates
-    x_overlap_min = max(x1_min, x2_min)
-    x_overlap_max = min(x1_max, x2_max)
-    y_overlap_min = max(y1_min, y2_min)
-    y_overlap_max = min(y1_max, y2_max)
-
-    # Check if there is an overlap
-    if x_overlap_max <= x_overlap_min or y_overlap_max <= y_overlap_min:
-        return 0.0
-
-    # Calculate the area of the intersection
-    intersection_area = (x_overlap_max - x_overlap_min) * (
-        y_overlap_max - y_overlap_min
-    )
-
-    # Calculate the overlap percentage relative to the smaller box
-    smaller_area = min(area1, area2)
-
-    return intersection_area / smaller_area
-
-
-def merge_boxes(
-    box1: tuple[float, float, float, float], box2: tuple[float, float, float, float]
-) -> tuple[float, float, float, float]:
-    """Merges two bounding boxes into one that encompasses both.
-
-    Args:
-        box1: Tuple of (xmin, ymin, xmax, ymax) for the first box.
-        box2: Tuple of (xmin, ymin, xmax, ymax) for the second box.
-
-    Returns:
-        tuple[float, float, float, float]: A new bounding box that contains both
-            input boxes.
-    """
-    x1_min, y1_min, x1_max, y1_max = box1
-    x2_min, y2_min, x2_max, y2_max = box2
-
-    merged_box = (
-        min(x1_min, x2_min),
-        min(y1_min, y2_min),
-        max(x1_max, x2_max),
-        max(y1_max, y2_max),
-    )
-
-    return merged_box
-
-
 def load_model() -> tuple["YOLOv10", str]:  # noqa: F821
     """Loads and initializes the document layout detection model.
 
@@ -187,7 +118,7 @@ def load_model() -> tuple["YOLOv10", str]:  # noqa: F821
     return LAYOUT_MODEL, device
 
 
-def predict_layout(images: list, batch_size: int = 8) -> list[list[dict]]:
+def predict_layout(images: list, batch_size: int, dpi: int) -> list[list[dict]]:
     """Predicts document layout elements in a batch of images.
 
     This function processes a batch of images through the layout detection model
@@ -196,6 +127,7 @@ def predict_layout(images: list, batch_size: int = 8) -> list[list[dict]]:
     Args:
         images: List of images to process.
         batch_size: Number of images to process in each batch.
+        dpi: Dots per inch (DPI) of the input images.
 
     Returns:
         list[list[dict]]: For each input image, a list of detected layout blocks,
@@ -219,7 +151,7 @@ def predict_layout(images: list, batch_size: int = 8) -> list[list[dict]]:
                 blocks.append(
                     {
                         "type": LAYOUT_CHOICES[int(cla.item())],
-                        "bbox": bbox,
+                        "bbox": [x * (72 / dpi) for x in bbox],
                     }
                 )
             blocks = merge_overlapping_blocks(blocks)
