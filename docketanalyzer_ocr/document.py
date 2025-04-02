@@ -597,8 +597,10 @@ class PDFDocument:
                                     yield self.pages[page_idx]
 
                     status = result.get("status")
-                    if status in ["COMPLETED", "FAILED", "CANCELLED"]:
+                    if status == "COMPLETED":
                         break
+                    elif status in ["FAILED", "CANCELLED"]:
+                        raise Exception(result)
             finally:
                 if s3_key is not None:
                     self.s3.delete(self.s3_key)
