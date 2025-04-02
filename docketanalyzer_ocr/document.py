@@ -537,7 +537,7 @@ class PDFDocument:
         else:
             self.doc = fitz.open(file_or_path)
             self.pdf_bytes = self.doc.tobytes()
-            self.pdf_path = Path(file_or_path)
+            self.pdf_path = Path(file_or_path).resolve()
             self.filename = filename or self.pdf_path.name
         self.dpi = dpi
         self.remote = remote
